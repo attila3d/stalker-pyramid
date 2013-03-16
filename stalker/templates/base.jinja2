@@ -1,0 +1,469 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Strict//EN'
+        'http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en'
+      xmlns:tal='http://xml.zope.org/namespaces/tal'>
+<head>
+  <title>Stalker v{{stalker.__version__}}</title>
+  <meta charset='utf-8'>
+  <meta http-equiv='Content-Type' content='text/html;charset=UTF-8'/>
+  <meta name='keywords' content='python web application'/>
+  <meta name='description' content='pyramid web application'/>
+  <link rel='shortcut icon'
+        href='{{request.static_url("stalker:static/stalker/images/favicon.ico")}}'/>
+  <link rel='stylesheet' type='text/css' media='screen' charset='utf-8'
+        href='{{request.static_url("stalker:static/stalker/css/stalker.css")}}'/>
+
+{# load jQuery and jQuery Gantt first#}
+  <link rel=stylesheet href='{{ request.static_url("stalker:static/jQueryGantt/platform.css") }}' type="text/css">
+  <link rel=stylesheet href='{{ request.static_url("stalker:static/jQueryGantt/libs/dateField/jquery.dateField.css") }}' type="text/css">
+  <link rel=stylesheet href='{{ request.static_url("stalker:static/jQueryGantt/gantt.css") }}' type="text/css">
+ 
+  <script src='{{ request.static_url("stalker:static/jquery/1.7/jquery.min.js") }}'></script>
+  <script src='{{ request.static_url("stalker:static/jqueryui/1.8/jquery-ui.min.js") }}'></script>
+{#  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>#}
+{#  <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.2/jquery-ui.min.js"></script>#}
+  
+  <script src='{{ request.static_url("stalker:static/jQueryGantt/libs/jquery.livequery.min.js") }}'></script>
+  <script src='{{ request.static_url("stalker:static/jQueryGantt/libs/jquery.timers.js") }}'></script>
+  <script src='{{ request.static_url("stalker:static/jQueryGantt/libs/platform.js") }}'></script>
+  <script src='{{ request.static_url("stalker:static/jQueryGantt/libs/date.js") }}'></script>
+  <script src='{{ request.static_url("stalker:static/jQueryGantt/libs/i18nJs.js") }}'></script>
+  <script src='{{ request.static_url("stalker:static/jQueryGantt/libs/dateField/jquery.dateField.js") }}'></script>
+  <script src='{{ request.static_url("stalker:static/jQueryGantt/libs/JST/jquery.JST.js") }}'></script>
+
+  <script src='{{ request.static_url("stalker:static/jQueryGantt/ganttUtilities.js") }}'></script>
+  <script src='{{ request.static_url("stalker:static/jQueryGantt/ganttTask.js") }}'></script>
+  <script src='{{ request.static_url("stalker:static/jQueryGantt/ganttDrawer.js") }}'></script>
+  <script src='{{ request.static_url("stalker:static/jQueryGantt/ganttGridEditor.js") }}'></script>
+  <script src='{{ request.static_url("stalker:static/jQueryGantt/ganttMaster.js") }}'></script>
+
+{# DOJO COMPRESSED #}
+  <link rel='stylesheet' type='text/css' media='screen' charset='utf-8'
+        href='{{ request.static_url("stalker:static/dijit/themes/claro/claro.css") }}'/>
+  <link rel='stylesheet' type='text/css' media='screen' charset='utf-8'
+        href='{{ request.static_url("stalker:static/dojox/grid/resources/claroGrid.css") }}'/>
+  <link rel='stylesheet' type='text/css' media='screen' charset='utf-8'
+        href='{{ request.static_url("stalker:static/dojox/gantt/resources/gantt.css") }}'/>
+  
+  <script type='text/javascript'
+          data-dojo-config="async: true, parseOnLoad: true"
+          src='{{ request.static_url("stalker:static/dojo/dojo.js") }}'>
+  </script>
+
+
+{# STALKER #}
+  <script type='text/javascript'
+          src='{{ request.static_url("stalker:static/stalker/stalker.js") }}'>
+  </script>
+  
+</head>
+<body class='claro'>
+{% block body %}
+  <div id='appLayout' class='demoLayout'>
+    <div id='header' class='edgePanel' style="overflow: hidden">
+    {% block header %}
+      <div id='stalker_logo'>
+        <a href="/">
+          Stalker <span style='font-size: 12px;'>v{{stalker.__version__}}</span>
+        </a>
+      </div>
+      
+      <div id='projects_menu'>
+        Projects
+      </div>
+      
+      <div id='mebar'>
+        <div id='mebutton'></div>
+      </div>
+      
+      <div id='create_menu'>
+        +
+      </div>
+    {% endblock %}
+    </div>
+    <div id='central_content' class='centralPanel'>
+    {% block content %}
+      <div id='main_view'>
+        {% block main_view %}{% endblock %}
+      </div>
+    {% endblock %}
+    </div>
+
+    <div id='footer' class='edgePanel'>
+    {% block footer %}
+      <div class='footer'>&copy; Copyright 2008-2013, Erkan Ozgur Yilmaz.</div>
+    {% endblock %}
+    </div>
+  </div>
+
+  <script type='text/javascript'>
+    require(['dojo/dom', 'dijit/registry', 'dijit/layout/BorderContainer',
+      'dijit/layout/TabContainer', 'dijit/layout/SplitContainer',
+      'dojox/layout/ContentPane', 'dijit/TooltipDialog', 'dijit/popup',
+      'dojo/on', 'dijit/form/DropDownButton', 'dijit/DropDownMenu',
+      'dijit/MenuItem', 'stalker/dialogCaller', 'dojo/store/JsonRest',
+      'dojo/store/Memory', 'dojo/_base/fx', 'dojo/domReady!'],
+      function(dom, registry, BorderContainer, TabContainer,
+               SplitContainer, ContentPane, TooltipDialog, popup, on,
+               DropDownButton, DropDownMenu, MenuItem, dialogCaller, JsonRest,
+               Memory, fx){
+        
+        // ********************************************************************
+        // create the BorderContainer and attach it to our appLayout div
+        var appLayout = new BorderContainer({
+          design: 'headline',
+          style: 'padding: 0px',
+          splitter: true,
+          gutters: false
+        }, 'appLayout');
+        
+        
+        // ********************************************************************
+        // Header
+        var header_pane = new ContentPane({
+          name: 'header_pane',
+          region: 'top',
+          style: 'height: 24px; padding: 0px;',
+          executeScripts: true
+        }, 'header');
+        appLayout.addChild(header_pane);
+        
+        
+        // ********************************************************************
+        // Main Content
+        var central_content_pane = new ContentPane({
+          name: 'central_content_pane',
+          region: 'center',
+          style: 'padding: 0px',
+          href: 'user_home',
+          executeScripts: true
+        }, 'central_content');
+        appLayout.addChild(central_content_pane);
+        
+        
+        // ********************************************************************
+        // Footer
+        var footer_content_pane = new ContentPane({
+          name: 'footer_pane',
+          region: 'bottom',
+          style: 'height: 14px; padding: 0px'
+        }, 'footer');
+        footer_content_pane.startup();
+        appLayout.addChild(footer_content_pane);
+        
+        
+        // ********************************************************************
+        // Projects Menu
+        // DropDownMenu
+        var projects_menu_dropDownMenu = new DropDownMenu({
+          id: 'projects_menu_dropDownMenu',
+          style: 'display: none;'
+        });
+        
+        // ********************************************************************
+        // Menu Items
+        {% for project in projects %}
+          projects_menu_dropDownMenu.addChild(
+            new MenuItem({
+              label: '{{ project.name }}',
+              onClick: function(){
+                central_content_pane.set(
+                  'href',
+                  'view/project/{{ project.id }}'
+                );
+                central_content_pane.refresh();
+              }
+            })
+          );
+        {% endfor %}
+        
+        // Menu Memory
+        var project_memory = new JsonRest({
+          target: '/get/projects'
+        });
+        
+        // Menu Updater
+        var projects_menu_updater = function(){
+          // delete the current items
+          var items = projects_menu_dropDownMenu.getChildren();
+          for (var i=0; i< items.length; i++){
+            items[i].destroyRecursive();
+          }
+          
+          // query new items
+          var result = project_memory.query().then(function(data){
+            for (var i=0; i < data.length; i++){
+              projects_menu_dropDownMenu.addChild(
+                new MenuItem({
+                  label: data[i].name,
+                  onClick: function(){
+                    central_content_pane.set(
+                      'href',
+                      'view/project/' + data[i].id
+                    );
+                    central_content_pane.refresh();
+                  }
+                })
+              );
+            }
+            
+{#            // animate the Button bg to show it is updated#}
+{#            var domNode = projects_menu_dropDownButton.domNode;#}
+{#            var animatedNode = domNode.children[0];#}
+{#            var bgColor = animatedNode.style.backgroundColor;#}
+{#            #}
+{#            fx.animateProperty({#}
+{#              node: animatedNode,#}
+{#              duration: 500,#}
+{#              properties: {#}
+{#                backgroundColor: {#}
+{#                  start: "#00ff00",#}
+{#                  end: bgColor#}
+{#                }#}
+{#              }#}
+{#            }).play();#}
+          });
+        };
+        
+        // Drop Down Button
+        var projects_menu_dropDownButton = new DropDownButton({
+          id: 'projects_menu_dropDownButton',
+          label: 'Projects',
+          style: 'margin-top: 0px; margin-bottom: 0px;',
+          dropDown: projects_menu_dropDownMenu
+        }, 'projects_menu');
+        projects_menu_dropDownButton.startup();
+        
+        
+        
+        // ********************************************************************
+        // Create Menu
+        // Drop Down Menu
+        var create_menu_dropDownMenu = new DropDownMenu({
+          style: 'display: none;'  
+        });
+
+        // **********
+        // Menu Items
+        
+        // -----
+        // Asset
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label:'Asset',
+            dialog_id:'add_asset_dialog',
+            content_creator: create_add_asset_dialog,
+            widget_type: 'MenuItem'
+          })
+        );
+        
+        // ----------
+        // Department
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label: 'Department',
+            dialog_id: 'add_department_dialog',
+            content_creator: create_add_department_dialog,
+            widget_type: 'MenuItem'
+          })
+        );
+        
+        // ------------
+        // Filename Template
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label:'Filename Tamplate',
+            dialog_id:'add_filename_template_dialog',
+            content_creator: create_add_filename_template_dialog,
+            widget_type: 'MenuItem'
+          })
+        );
+        
+        // -----
+        // Group
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label: 'Group',
+            dialog_id: 'add_group_dialog',
+            content_creator: create_add_group_dialog,
+            widget_type: 'MenuItem'
+          })
+        );
+        
+        // ------------
+        // Image Format
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label:'Image Format',
+            dialog_id:'add_image_format_dialog',
+            content_creator: create_add_image_format_dialog,
+            widget_type: 'MenuItem'
+          })
+        );
+       
+        // -------
+        // Repository
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label:'Repository',
+            dialog_id:'add_repository_dialog',
+            content_creator: create_add_repository_dialog,
+            widget_type: 'MenuItem'
+          })
+        );
+        
+        // -------
+        // Project
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label:'Project',
+            dialog_id:'add_project_dialog',
+            content_creator: create_add_project_dialog,
+            widget_type: 'MenuItem',
+            related_field_updater: projects_menu_updater
+          })
+        );
+        
+        // --------
+        // Sequence
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label:'Sequence',
+            dialog_id:'add_sequence_dialog',
+            content_creator: create_add_sequence_dialog,
+            widget_type: 'MenuItem'
+          })
+        );
+        
+        // ----
+        // Shot
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label:'Shot',
+            dialog_id:'add_shot_dialog',
+            content_creator: create_add_shot_dialog,
+            widget_type: 'MenuItem'
+          })
+        );
+        
+        // -------
+        // Status
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label:'Status',
+            dialog_id:'add_status_dialog',
+            content_creator: create_add_status_dialog,
+            widget_type: 'MenuItem'
+          })
+        );
+        
+        // -------
+        // Status List
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label:'Status List',
+            dialog_id:'add_status_list_dialog',
+            content_creator: create_add_status_list_dialog,
+            widget_type: 'MenuItem'
+          })
+        );
+        
+        // -------
+        // Structure
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label:'Structure',
+            dialog_id:'add_structure_dialog',
+            content_creator: create_add_structure_dialog,
+            widget_type: 'MenuItem'
+          })
+        ); 
+        
+{#        // ----#}
+{#        // Task#}
+{#        create_menu_dropDownMenu.addChild(#}
+{#          dialogCaller({#}
+{#            label:'Task',#}
+{#            dialog_id:'add_task_dialog',#}
+{#            content_creator: create_add_task_dialog,#}
+{#            widget_type: 'MenuItem'#}
+{#          })#}
+{#        );#}
+        
+        // -------
+        // User
+        create_menu_dropDownMenu.addChild(
+          dialogCaller({
+            label:'User',
+            dialog_id:'add_user_dialog',
+            content_creator: create_add_user_dialog,
+            widget_type: 'MenuItem'
+          })
+        );
+         
+        // ****************
+        // Drop Down Button
+        var create_menu_button = new DropDownButton({
+          label: '+',
+          style: 'margin-top: 0px; margin-bottom: 0px;',
+          dropDown: create_menu_dropDownMenu
+        }, 'create_menu');
+        create_menu_button.startup();
+        
+{#        var create_menu_tooltipDialog = new TooltipDialog({#}
+{#          id: 'create_menu_tooltipDialog',#}
+{#          style: 'width: 250px;',#}
+{#          href: '/create_menu',#}
+{#          executeScripts: true,#}
+{#          onMouseLeave: function(){#}
+{#            popup.close(create_menu_tooltipDialog);#}
+{#          }#}
+{#        });#}
+        
+{#        // attach the TooltipDialog to our create_menu#}
+{#        on(dojo.byId('create_menu'), 'click', function(){#}
+{#          // refresh the create_menu_tooltipDialog content#}
+{#          create_menu_tooltipDialog.refresh();#}
+{#          #}
+{#          popup.open({#}
+{#            popup: create_menu_tooltipDialog,#}
+{#            around: dom.byId('create_menu')#}
+{#          });#}
+{#        });#}
+        
+        // ********************************************************************
+        // mebar
+        var mebar_tooltipDialog = new TooltipDialog({
+          id: 'mebar_tooltipDialog',
+          style: 'width: 250px; height: 100%',
+          href: '/me_menu',
+          onMouseLeave: function(){
+            mebar_tooltipDialog.set('visible', false);
+            popup.close(mebar_tooltipDialog);
+          }
+        });
+        mebar_tooltipDialog.startup();
+        
+        // 
+        var mebar_dropDownButton = DropDownButton({
+          label: '{{ user.name }}',
+          dropDown: mebar_tooltipDialog,
+          style: 'margin-top: 0px; margin-bottom: 0px;'
+        }, 'mebutton');
+        mebar_dropDownButton.startup();
+        
+        // ********************************************************************
+        // startup app layout
+        appLayout.startup();
+        
+        // load user home by default
+        central_content_pane.set(
+          'href',
+          'user_home'
+        );
+        central_content_pane.refresh();
+    });
+  </script>
+{% endblock %}
+</body>
+</html>
