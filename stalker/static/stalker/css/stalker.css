@@ -1,0 +1,222 @@
+html, body {
+    font: 12px Myriad,Helvetica,Tahoma,Arial,clean,sans-serif; 
+    *font-size: 75%;
+    background-color: #c0c0c0;
+    font-size: 12px;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    padding: 0;
+    -moz-user-select: none;
+    -webkit-user-select: none; 
+}
+
+#appLayout {
+    height: 100%;
+}
+
+#leftCol {
+    width: 14em;
+}
+
+h1 {
+    font-size: 36px;
+    line-height: 40px;
+}
+
+h2 {
+    font-size: 24px;
+    line-height: 28px;
+}
+
+h3 {
+    font-size: 16px;
+    line-height: 20px;
+}
+
+p {
+    font-size: 12px;
+    line-height: 16px;
+}
+
+ul li ol {
+    font-size: 12px;
+    line-height: 16px;
+}
+
+#small_text {
+    font-size: 10px;
+    line-height: 14px;
+}
+
+a:link {
+    text-decoration: none;
+}
+a:visited {
+    text-decoration: none;
+}
+a:active {
+    text-decoration: none
+}
+a:hover {
+    text-decoration: underline;
+}
+
+#central_content {
+    bottom: 24px;
+    position: absolute;
+    top: 40px;
+    width: 100%;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+}
+
+.label_column {
+    text-align: right;
+    font-weight: bold;
+}
+
+.input_column {
+    width: auto;
+}
+
+.button_column {
+    float: left;
+}
+
+#header{
+    background-color: #2A2C2E;
+    clear: both;
+    color: white;
+    float: left;
+    height: 30px;
+    margin: 0;
+    width: 100%;
+}
+
+#stalker_logo{
+    float: left;
+    clear: both;
+    font-size: 16px;
+    margin-left: 10px;
+    margin-top: 3px;
+    color: white;
+}
+
+#stalker_logo a:link {
+    color: white;
+    text-decoration: none;
+}
+#stalker_logo a:visited {
+    color: white;
+    text-decoration: none;
+}
+#stalker_logo a:active {
+    color: white;
+    text-decoration: none
+}
+#stalker_logo a:hover {
+    color: white;
+    text-decoration: underline;
+}
+
+#mebar {
+    margin-top: 0;
+    margin-bottom: 0;
+    clear: both;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+.link_with_action {
+    cursor: pointer;
+}
+
+.link_with_action:hover {
+    text-decoration: underline;
+}
+
+#avatar {
+    width: 96px;
+    height: 96px;
+}
+
+#footer{
+    position:absolute;
+    height: 24px;
+    width: 100%;
+    text-align: center;
+    bottom: 0px;
+    background-color: #e3e3e3;
+    color: #a0a0a0;
+    overflow: hidden;
+}
+
+#main_view {
+    float: left;
+    height: 100%;
+    width: 100%;
+}
+
+#search {
+    float: right;
+    position: relative;
+    right: 6px;
+    top: 8px;
+    width: 235px;
+}
+
+#search #search_label {
+    float: left;
+    left: 4px;
+    position: relative;
+    top: 3px;
+}
+
+#search #search_form {
+    float: right;
+}
+
+#search input {
+    border: medium none transparent;
+    border-radius: 12px 12px 12px 12px;
+    font-size: 12px;
+    height: 20px;
+    width: 182px;
+}
+
+.project_thumbnail {
+    width: 192px;
+    height: 192px;
+    border: 1px;
+    border-color: black;
+    background-color: #d3d3d3;
+    float: left;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.project_info {
+    position: absolute;
+    clear: both;
+    left: 204px;
+}
+
+
+.user_avatar {
+    width: 192px;
+    height: 192px;
+    border: 1px;
+    border-color: black;
+    background-color: #d3d3d3;
+    float: left;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.user_info {
+    position: absolute;
+    clear: both;
+    left: 204px;
+}
