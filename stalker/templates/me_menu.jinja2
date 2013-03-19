@@ -1,0 +1,28 @@
+{% block me_menu %}
+  <div class='dijitDialogPaneContentArea'>
+    <table style='width: 100%'>
+      <tr>
+        <td rowspan='2'>
+          <div id='avatar'>
+            <img src='{{ request.static_url("stalker:static/stalker/images/NoPicture.gif") }}' alt=''>
+          </div>
+        </td>
+        <td>
+          <b>{{ user.name }}</b><br>
+          {{ user.email }}
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div class='dijitDialogPaneActionBar'>
+  <button id='settings_button'
+            dojoType='dijit.form.Button'
+            type='button'
+            >Settings</button>
+    <button id='logout_button'
+            dojoType='dijit.form.Button'
+            type='button'
+            onclick='window.location = "/logout"'
+            >Logout</button>
+  </div> 
+{% endblock %}
