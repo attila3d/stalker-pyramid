@@ -1,0 +1,161 @@
+<div class='dijitDialogPaneContentArea'>
+  <div id='add_repository_form'>
+    <table style='width: 100%'>
+      
+      {# NAME #}
+      <tr>
+        <td class='label_column'>
+          <label for='repository_name'>
+            Name
+          </label>
+        </td>
+        <td class='input_column'>
+          <input id='repository_name'>
+        </td>
+      </tr>
+      
+      {# WINDOWS_PATH #}
+      <tr>
+        <td class='label_column'>
+          <label for='repository_windows_path'>
+            Windows Path
+          </label>
+        </td>
+        <td class='input_column'>
+          <input id='repository_windows_path'>
+        </td>
+      </tr>
+      
+      {# LINUX_PATH #}
+      <tr>
+        <td class='label_column'>
+          <label for='repository_linux_path'>
+            Linux Path
+          </label>
+        </td>
+        <td class='input_column'>
+          <input id='repository_linux_path'>
+        </td>
+      </tr>
+
+      {# OSX_PATH #}
+      <tr>
+        <td class='label_column'>
+          <label for='repository_osx_path'>
+            OSX Path
+          </label>
+        </td>
+        <td class='input_column'>
+          <input id='repository_osx_path'>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+<div class='dijitDialogPaneActionBar'>
+  <button id='repository_add_button'></button>
+  <button id='repository_cancel_button'></button>
+</div>
+<script type='text/javascript'>
+  require(['dijit/registry', 'dojo/store/Memory', 'dijit/form/Form',
+    'dijit/form/ValidationTextBox', 'dijit/form/TextBox',
+    'dijit/form/NumberTextBox', 'dijit/form/Button', 'stalker/submitForm',
+    'dojo/domReady!'],
+    function(registry, Memory, Form, ValidationTextBox, NumberTextBox,
+             TextBox, Button, submitForm){
+      
+      // **********************************************************************
+      // Form
+      var add_repository_form = new Form({
+        id: 'add_repository_form'
+      }, 'add_repository_form');
+      add_repository_form.startup();
+      
+      
+      
+      
+      // **********************************************************************
+      // Name
+      var name_textBox = new ValidationTextBox({
+        name: 'name',
+        label: 'Name',
+        placeHolder: 'Enter a Name',
+        required: true
+      }, 'repository_name');
+      name_textBox.startup();
+      
+      
+      
+      
+      // **********************************************************************
+      // Windows Path
+      var windows_path_textBox = new ValidationTextBox({
+        name: 'windows_path',
+        label: 'Windows Path',
+        placeHolder: 'Enter the Windows Path',
+        required: true
+      }, 'repository_windows_path');
+      windows_path_textBox.startup();
+      
+      
+      
+      
+      // **********************************************************************
+      // Linux Path
+      var linux_path_textBox = new ValidationTextBox({
+        name: 'linux_path',
+        label: 'Linux Path',
+        placeHolder: 'Enter the Linux Path',
+        required: true
+      }, 'repository_linux_path');
+      linux_path_textBox.startup();
+      
+      
+      
+      
+      // **********************************************************************
+      // OSX Path
+      var osx_path_textBox = new ValidationTextBox({
+        name: 'osx_path',
+        label: 'OSX Path',
+        placeHolder: 'Enter the OSX Path',
+        required: true
+      }, 'repository_osx_path');
+      osx_path_textBox.startup();
+      
+      
+      
+      
+      // **********************************************************************
+      // Add Button
+      var add_button = new Button({
+        label: 'Add',
+        type: 'button',
+        onClick: function(){
+          submitForm({
+            dialog: registry.byId('add_repository_dialog'),
+            form: add_repository_form,
+            additional_data: {submitted: 'add'},
+            url: '{{ request.route_url('add_repository') }}',
+            method: 'POST'
+          });
+        }
+      }, 'repository_add_button');
+      add_button.startup();
+      
+      
+      
+      
+      // **********************************************************************
+      // Cancel Button
+      var cancel_button = new Button({
+        label: 'Cancel',
+        type: 'button',
+        onClick: function(){
+          registry.byId('add_repository_dialog').destroyRecursive();
+        }
+      }, 'repository_cancel_button');
+      cancel_button.startup();        
+  });
+</script>
+
