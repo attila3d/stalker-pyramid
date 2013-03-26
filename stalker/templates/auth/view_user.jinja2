@@ -1,0 +1,46 @@
+{# Complex Info #}
+<div id='user_related_data_tab_container'>
+    {# Tab View #}
+</div>
+<script type='text/javascript'>
+  require(['dijit/registry', 'dijit/layout/TabContainer', 'dojox/layout/ContentPane', 'dojo/domReady!'],
+    function(registry, TabContainer, ContentPane){
+
+      console.log('user_id : {{ user.id }}');
+
+      // **********************************************************************
+      // Bottom Part - Complex Data View
+      var user_related_data_tab_container = new TabContainer({
+        region: 'bottom'
+      }, 'user_related_data_tab_container');
+
+      var overview_content_pane = new ContentPane({
+        title: 'Summarize',
+        href: 'summarize/user/{{ user.id }}'
+      });
+      
+      var tasks_content_pane = new ContentPane({
+        title: 'Tasks',
+        href: 'view/tasks/{{ user.id }}'
+      });
+      
+      var assets_content_pane = new ContentPane({
+        title: 'Assets',
+        href:'view/versions/{{ user.id }}'
+      });
+
+      var tickets_content_pane = new ContentPane({
+        title: 'Tickets',
+        content: 'view/tickets/{{ user.id }}'
+      });
+      
+      user_related_data_tab_container.addChild(overview_content_pane);
+      user_related_data_tab_container.addChild(tasks_content_pane);
+      user_related_data_tab_container.addChild(assets_content_pane);
+      user_related_data_tab_container.addChild(tickets_content_pane);
+
+      user_related_data_tab_container.startup();
+
+  });
+</script>
+
