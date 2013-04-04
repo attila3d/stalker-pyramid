@@ -1,0 +1,68 @@
+<div style="margin: 0" id='asset_split_container'>
+  <div id='asset_summary'>
+      {# Summary View #}
+  </div>
+  <div id='asset_related_data_tab_container'>
+      {# Tab View #}
+  </div>
+</div>
+
+<script type='text/javascript'>
+  require(['dijit/registry', 'dijit/layout/SplitContainer',
+    'dijit/layout/TabContainer', 'dojox/layout/ContentPane', 'dojo/domReady!'],
+          function(registry, SplitContainer, TabContainer, ContentPane){
+
+            var asset_SplitContainer = new SplitContainer({
+              region: 'center',
+              orientation: 'vertical',
+              splitter: false
+
+            }, 'asset_split_container');
+
+            var summary_content_pane = new ContentPane({
+              title: 'Summarize',
+              href: 'summarize/asset/{{ asset.id }}',
+              region: 'top',
+              style: 'padding: 0;'
+            },'asset_summary');
+
+            // **********************************************************************
+            // Bottom Part - Complex Data View
+            var asset_related_data_tab_container = new TabContainer({
+              region: 'bottom',
+              style: 'background-color: #f8941d'
+            }, 'asset_related_data_tab_container');
+
+            var users_content_pane = new ContentPane({
+              title: 'Users',
+              href: 'list/users/{{ asset.id }}'
+            });
+
+            var tasks_content_pane = new ContentPane({
+              title: 'Tasks',
+              href: 'list/tasks/{{ asset.id }}'
+            });
+
+            var tickets_content_pane = new ContentPane({
+              title: 'Tickets',
+              content: 'list/tickets/{{ asset.id }}'
+            });
+
+            var versions_content_pane = new ContentPane({
+              title: 'Versions',
+              href: 'list/versions/{{ asset.id }}'
+            });
+
+            asset_related_data_tab_container.addChild(users_content_pane);
+            asset_related_data_tab_container.addChild(tasks_content_pane);
+            asset_related_data_tab_container.addChild(tickets_content_pane);
+            asset_related_data_tab_container.addChild(versions_content_pane);
+            asset_related_data_tab_container.startup();
+
+            asset_SplitContainer.addChild(summary_content_pane);
+            asset_SplitContainer.addChild(asset_related_data_tab_container);
+            asset_SplitContainer.startup();
+
+
+          });
+</script>

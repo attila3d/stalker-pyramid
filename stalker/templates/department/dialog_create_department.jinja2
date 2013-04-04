@@ -1,0 +1,135 @@
+<div class='dijitDialogPaneContentArea'>
+  <form id='create_department_form'>
+    <table style='width: 100%'>
+      
+      {# NAME #}
+      <tr>
+        <td class='label_column'>
+          <label for='department_name'>Name</label>
+        </td>
+        <td class='input_column'>
+          <input id='department_name'>
+        </td>
+      </tr>
+      
+      {# LEAD #}
+      <tr>
+        <td class='label_column'>
+          <label for='department_lead'>Lead</label>
+        </td>
+        <td class='input_column'>
+          <input id='department_lead'>
+        </td>
+      </tr>
+      
+      {# TAGS #}
+      <tr>
+        <td class='label_column'>
+          <label for='department_tags'>Tags</label>
+        </td>
+        <td class='input_column'>
+          <input id='department_tags'>
+        </td>
+      </tr>
+      
+    </table>
+  </form>
+</div>
+
+<div class='dijitDialogPaneActionBar'>
+  <button id='department_submit_button'>OK</button>
+  <button id='department_cancel_button'>Cancel</button>
+</div>
+
+
+<script type='text/javascript'>
+  require(['dijit/registry', 'dojo/store/JsonRest', 'dijit/form/Form',
+    'dijit/form/Button', 'dijit/form/ValidationTextBox',
+    'dijit/form/FilteringSelect', 'stalker/submitForm', 'stalker/TagSelect',
+    'stalker/fieldUpdater', 'dojo/domReady!'
+  ], function(registry, JsonRest, Form, Button, ValidationTextBox,
+              FilteringSelect, submitForm, TagSelect, fieldUpdater){
+    
+    // ************************************************************************
+    // Form
+    var create_department_form = new Form({
+      id: 'create_department_form'
+    }, 'create_department_form');
+    create_department_form.startup();
+    
+    // ************************************************************************
+    // Name
+    var name_validationTextBox = new ValidationTextBox({
+      name: 'name',
+      label: 'Name',
+      placeHodler: 'Enter Department Name',
+      required: true
+    }, 'department_name');
+    name_validationTextBox.startup();
+    
+    // ************************************************************************
+    // Lead
+    // 
+    // There is no need to use the JsonRest here, but we have the
+    // stalker.fieldUpdater which helps a lot when filling a widget with data.
+    
+    // Memory
+    var lead_memory = new JsonRest({
+      target: 'get/users'
+    });
+    
+    // Widget
+    var lead_filteringSelect = FilteringSelect({
+      name: 'lead_id',
+      label: 'Leader',
+      required: false
+    }, 'department_lead');
+    lead_filteringSelect.startup();
+    
+    // Updater
+    var lead_updater = fieldUpdater({
+      'memory': lead_memory,
+      'widget': lead_filteringSelect
+    });
+    
+    // fill the field by calling the updater
+    lead_updater({animate: false});
+    
+    // ************************************************************************
+    // Tags
+    var tags_tagSelect = new TagSelect({
+      name: 'tags',
+      type: 'TextBox'
+    }, 'department_tags');
+    tags_tagSelect.startup();
+    
+    // ************************************************************************
+    // Submit Button
+    var submit_button = new Button({
+      label: 'OK',
+      type: 'button',
+      onClick: function(){
+        submitForm({
+          dialog: registry.byId('create_department_dialog'),
+          form: create_department_form,
+          additional_data: {submitted: 'create'},
+          url: '{{request.route_url("create_department")}}',
+          method: 'POST'
+        });
+      }
+    }, 'department_submit_button');
+    submit_button.startup();
+    
+    // ************************************************************************
+    // Cancel Button
+    var cancel_button = new Button({
+      label: 'Cancel',
+      type: 'button',
+      onClick: function(){
+        registry.byId('create_department_dialog').destroyRecursive();
+      }
+    }, 'department_cancel_button');
+    cancel_button.startup();
+    
+  });
+</script>
