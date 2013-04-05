@@ -1,0 +1,115 @@
+{# Stalker a Production Asset Management System
+ Copyright (C) 2009-2013 Erkan Ozgur Yilmaz
+ 
+ This file is part of Stalker.
+ 
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation;
+ version 2.1 of the License.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+#}
+<div class='dijitDialogPaneContentArea' style='height: 380px;width: 380px'>
+  <form id='append_user_form'>
+    <table style='width: 100%'>
+      <tr>
+        <td class='input_column'>
+          <select id='all_users_list'>
+          </select>
+        </td>
+        <td class='input_column'>
+          <select id='project_users_list' >
+          </select>
+        </td>
+      </tr>
+    </table>
+  </form>
+
+</div>
+
+{#<div class='dijitDialogPaneActionBar'>#}
+{#  <button id='user_append_button'>Append</button>#}
+{#  <button id='user_cancel_button'>Cancel</button>#}
+{#</div>#}
+
+<script type="text/javascript">
+  require(['dijit/registry',
+           'dojo/store/Memory',
+           'dijit/form/Form',
+           'dijit/form/Button',
+           'dijit/form/MultiSelect',
+           'dojo/store/JsonRest',
+           'stalker/submitForm',
+           'stalker/dialogCaller',
+           'stalker/fieldUpdater',
+           'dojo/domReady!'
+  ],
+          function(registry,
+                   Memory,
+                   Form,
+                   Button,
+                   MultiSelect,
+                   JsonRest,
+                   submitForm,
+                   dialogCaller,
+                   fieldUpdater)
+          {
+            // **********************************************************************
+            // Form
+            var append_user_form = new Form({
+              id: 'append_user_form'
+            }, 'append_user_form');
+            append_user_form.startup();
+
+            // **********************************************************************
+            // All User List
+            var all_users_memory = new JsonRest({
+              target: '/get/users'
+            });
+
+            var all_users_multi_select = new MultiSelect({
+              name: 'all_users',
+              required: false,
+              style: 'height: 150px; width: 200px'
+            }, 'all_users_list');
+            all_users_multi_select.startup();
+
+            // The Updater
+            var all_users_field_updater = fieldUpdater({
+              'memory': all_users_memory,
+              'widget': all_users_multi_select
+            });
+            // run the function to fill the data for the first time
+            all_users_field_updater({animate: false});
+
+            // **********************************************************************
+            // Project User List
+            var project_users_memory = new JsonRest({
+              target: '/get/users_byEntity/{{ project.id }}'
+            });
+
+            var project_users_multi_select = new MultiSelect({
+              name: 'project_users',
+              required: false,
+              style: 'height: 150px; width: 200px'
+            }, 'project_users_list');
+            project_users_multi_select.startup();
+
+            // The Updater
+            var project_users_field_updater = fieldUpdater({
+              'memory': project_users_memory,
+              'widget': project_users_multi_select
+            });
+            // run the function to fill the data for the first time
+            project_users_field_updater({animate: false});
+
+           });
+</script>
