@@ -1,0 +1,132 @@
+{# Stalker a Production Asset Management System
+ Copyright (C) 2009-2013 Erkan Ozgur Yilmaz
+ 
+ This file is part of Stalker.
+ 
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation;
+ version 2.1 of the License.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+#}
+<div style="background-color: #ffb3d0" class="page_title"></div>
+<div id='asset_details_content_pane'>
+  {# Avatar #}
+  <div id='asset_thumbnail' class='thumbnail'>No Avatar</div>
+  <div id='asset_summary_chart1'
+      style='width: 100px;
+                  height: 100px;
+                  position: absolute;
+                  top: 200px;
+                  left: 0px;'></div>
+  {# Basic Info #}
+  <div id='asset_info' class='summary_info'>
+    <h2 style='margin: 0px;'>{{ asset.name }}</h2>
+    <h5 style='margin: 0px;'>({{ asset.code }})</h5>
+    <table>
+      <tr>
+        <td style='text-align: right'><b>Project</b></td>
+        <td>&nbsp;</td>
+        <td>
+          <a href="#" class= "DataLink" stalker_target="central_content" stalker_href = "view/project/{{ asset.project.id }}">{{ asset.project.name }}</a>
+        </td>
+      </tr>
+      <tr>
+        <td style='text-align: right'><b>Status</b></td>
+        <td>&nbsp;</td>
+        <td>{{ asset.status.name }}</td>
+      </tr>
+      <tr>
+        <td style='text-align: right'><b>Type</b></td>
+        <td>&nbsp;</td>
+        <td>{{ asset.type.name }}</td>
+      </tr>
+      <tr>
+        <td style='text-align: right'><b>Description</b></td>
+        <td>&nbsp;</td>
+        <td>{{ asset.description }}</td>
+      </tr>
+      <tr>
+        <td style='text-align: right'><b>Created By</b></td>
+        <td>&nbsp;</td>
+        <td>
+          <a href="#" class= "DataLink" stalker_target="central_content" stalker_href = "view/user/{{ asset.created_by.id }}">{{ asset.created_by.name }}</a>
+        </td>
+      </tr>
+
+    </table>
+    <button id='update_asset_button'>Update</button>
+  </div>
+    {#  Charts  #}
+{#  <div>#}
+{#    <div id='asset_summary_chart1'#}
+{#         style='width: 200px;#}
+{#                  height: 200px;#}
+{#                  position: absolute;#}
+{#                  right: 20px;'></div>#}
+{#  </div>#}
+</div>
+
+<script type="text/javascript">
+  require(['dijit/registry',
+    'dojox/charting/Chart',
+    'dojox/charting/themes/Tufte',
+    'dojox/charting/plot2d/Pie',
+    'dojox/charting/action2d/MoveSlice',
+    'dijit/form/Button',
+    'stalker/dialogCaller',
+    'stalker/gotoLink',
+    'dojo/ready'],
+          function(registry, Chart, theme, PiePlot,  MoveSlice, Button, dialogCaller, gotoLink,ready){
+            ready(function(){
+
+
+              // Create the chart within it's "holding" node
+              var pieChart = new Chart('asset_summary_chart1');
+
+              // Add the only/default plot
+              pieChart.setTheme(theme);
+
+              // Add the only/default plot
+              pieChart.addPlot("default", {
+                type: PiePlot, // our plot2d/Pie module reference as type value
+                radius: 40,
+                fontColor: "black",
+                labelOffset: 0
+              });
+
+              var chartData = [1000, 12000];
+
+              // Add the series of data
+              pieChart.addSeries('January', chartData);
+
+              // Create the slice mover
+              var mag = new MoveSlice(pieChart, 'default');
+
+              // Render the chart!
+              pieChart.render();
+
+              // UPDATE STRUCTURE BUTTON
+              var update_asset_button = dialogCaller({
+                label:'Update',
+                dialog_id: 'update_asset_dialog',
+                content_creator: update_asset_dialog_creator,
+                attach_to: 'update_asset_button',
+                data_id: {{ asset.id }}
+              });
+              update_asset_button.startup();
+
+            });
+
+            gotoLink();
+
+          });
+</script>
