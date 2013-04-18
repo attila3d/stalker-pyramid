@@ -1,0 +1,49 @@
+{# Stalker a Production Asset Management System
+ Copyright (C) 2009-2013 Erkan Ozgur Yilmaz
+ 
+ This file is part of Stalker.
+ 
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation;
+ version 2.1 of the License.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+#}
+<div style="text-align: center"><h4><b>Department Summary</b></h4></div>
+
+<div id='department_details_content_pane'>
+  <div style="background-color: #662d91 " class="page_title"></div>
+    {# Avatar #}
+      {# Avatar #}
+    <div id='user_avatar'
+         class='thumbnail'>
+      {% if not department.thumbnail %}
+      <img src='{{ request.static_url("stalker:static/stalker/images/NoPicture.gif") }}' alt=''
+              style='width:192px; height: 192px'>
+      {% endif %}
+    </div>
+
+    {# Basic Info #}
+  <div id='department_info' class='summary_info'>
+    <h2 style='margin: 0px; text-align: left;'>{{ department.name }}</h2>
+    <table>
+        {% if department.lead %}
+      <tr>
+        <td style='text-align: right'><b>Lead</b></td>
+        <td>&nbsp;</td>
+        <td>
+          <a href="#" class= "DataLink" stalker_target = "central_content" stalker_href = "view/user/{{ department.lead.id }}">{{ department.lead.name}}</a>
+          ({{ department.lead.login }})</td>
+      </tr>
+        {% endif %}
+    </table>
+  </div>
+</div>
