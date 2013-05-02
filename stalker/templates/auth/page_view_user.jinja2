@@ -1,0 +1,117 @@
+{# Stalker a Production Asset Management System
+ Copyright (C) 2009-2013 Erkan Ozgur Yilmaz
+
+ This file is part of Stalker.
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation;
+ version 2.1 of the License.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+#}
+<div style="margin-top: 0" id='user_border_container'>
+{#  <div id='user_summary'>#}
+      {# Summary View #}
+{#  </div>#}
+{#  <div id='user_related_data_tab_container'>#}
+{#    <div id='tasks_pane'></div>#}
+{#    <div id='projects_pane'></div>#}
+{#    <div id='tickets_pane'></div>#}
+{#    <div id='departments_pane'></div>#}
+{#  </div>#}
+</div>
+
+<script type='text/javascript'>
+  require([
+    "dojo/dom",
+    'dijit/layout/SplitContainer',
+    'dijit/layout/TabContainer',
+    'dojox/layout/ContentPane',
+    'dijit/registry',
+    'dojo/domReady!'
+  ], function(
+          dom,
+          SplitContainer,
+          TabContainer,
+          ContentPane,
+          registry,
+          ready
+          ){
+
+{#    ready(function(){#}
+      var user_SplitContainer = new SplitContainer({
+                region: 'center',
+                orientation: 'vertical',
+                splitter: false
+      },'user_border_container');
+
+      var summary_content_pane = new ContentPane({
+        title: 'Summarize',
+        href: 'summarize/user/{{ user.id }}',
+        region:'leading',
+        style: 'width: 1000px; height: 200px;  padding: 0; background-color: #eeeeee;',
+        splitter:true
+
+      });
+
+      user_SplitContainer.addChild(summary_content_pane);
+
+      // **********************************************************************
+      // Bottom Part - Complex Data View
+      var user_related_data_tab_container = new TabContainer({
+        title: 'Tab',
+        region: 'bottom',
+        style: 'width: 1000px; height: 300px; background-color: #00aef0;',
+        splitter:true
+
+      });
+
+
+      var tasks_content_pane = new ContentPane({
+        title: 'Tasks',
+        href: 'list/tasks/{{ user.id }}'
+      });
+
+
+      var projects_content_pane = new ContentPane({
+        title: 'Projects',
+        href:'list/projects/{{ user.id }}'
+      });
+
+      var departments_content_pane = new ContentPane({
+        title: 'Departments',
+        href: 'list/departments/{{ user.id }}'
+      });
+
+
+      var tickets_content_pane = new ContentPane({
+        title: 'Tickets',
+        content: 'list/tickets/{{ user.id }}'
+      });
+
+
+      user_related_data_tab_container.addChild(tasks_content_pane);
+      user_related_data_tab_container.addChild(projects_content_pane);
+      user_related_data_tab_container.addChild(departments_content_pane);
+      user_related_data_tab_container.addChild(tickets_content_pane);
+
+      // user_related_data_tab_container.startup();
+
+
+      user_SplitContainer.addChild(user_related_data_tab_container);
+
+      //document.body.appendChild(user_SplitContainer.domNode);
+      user_related_data_tab_container.startup();
+      user_SplitContainer.startup();
+{#    });#}
+  });
+</script>
+
