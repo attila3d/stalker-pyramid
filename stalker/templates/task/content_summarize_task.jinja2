@@ -1,0 +1,117 @@
+<div id='task_details_content_pane'>
+    <div style="background-color: #fff2f0 " class="page_title"></div>
+    <div id='task_summary_chart1'
+         style='width: 200px;
+                height: 200px;
+                position: absolute;
+                top: 10px;
+                left: 0;'></div>
+
+    {# Basic Info #}
+    <div id='task_info' class='summary_info'>
+        <h2 style='margin: 0; text-align: left'>{{ task.name }}</h2>
+        <table>
+            <tr>
+                <td style='text-align: right'><b>Project</b></td>
+                <td>&nbsp;</td>
+                <td>
+                    <a href="#" class="DataLink"
+                       stalker_target="central_content"
+                       stalker_href="view/project/{{ task.project.id }}">{{ task.project.name }}</a>
+                </td>
+            </tr>
+            <tr>
+                <td style='text-align: right'><b>Status</b></td>
+                <td>&nbsp;</td>
+                <td>{{ task.status.name }}</td>
+            </tr>
+            <tr>
+                <td style='text-align: right'><b>Created By</b></td>
+                <td>&nbsp;</td>
+                <td>
+                    <a href="#" class="DataLink"
+                       stalker_target="central_content"
+                       stalker_href="view/user/{{ task.created_by.id }}">{{ task.created_by.name }}</a>
+                </td>
+            </tr>
+            <tr>
+                <td style='text-align: right'><b>Description</b></td>
+                <td>&nbsp;</td>
+                <td>{{ task.description }}</td>
+            </tr>
+
+        </table>
+        <button id='update_task_button'>Update</button>
+    </div>
+    {#  Charts  #}
+
+</div>
+
+<script type="text/javascript">
+    require([
+        'dojox/charting/Chart',
+        'dojox/charting/themes/MiamiNice',
+        'dojox/charting/plot2d/Pie',
+        'dojox/charting/action2d/MoveSlice',
+        'dijit/form/Button',
+
+        'stalker/dialogs',
+        'stalker/dialogCaller',
+        'stalker/gotoLink',
+
+        'dojo/domReady!'
+    ], function (Chart, theme, PiePlot, MoveSlice, Button, dialogs,
+                 dialogCaller, gotoLink) {
+
+        // Create the chart within it's "holding" node
+        var pieChart = new Chart('task_summary_chart1');
+
+        // Add the only/default plot
+        pieChart.setTheme(theme);
+
+        // Add the only/default plot
+        pieChart.addPlot("default", {
+            type: PiePlot, // our plot2d/Pie module reference as type value
+            radius: 80,
+            fontColor: "black",
+            labelOffset: 0
+        });
+        
+        var chartData = [
+            {{ task.total_logged_seconds }},
+            {{ task.remaining_seconds }}];
+{#        ,#}
+{#            { stroke: { color: "green" }, fill: "lightgreen" },#}
+{#            { stroke: { color: "red" }, fill: "lightred" }#}
+{#        ];#}
+
+        // Add the series of data
+        pieChart.addSeries('January', chartData);
+
+        // Create the slice mover
+        var mag = new MoveSlice(pieChart, 'default');
+
+        // Render the chart!
+        pieChart.render();
+
+        // UPDATE STRUCTURE BUTTON
+        var update_task_button = dialogCaller({
+            label: 'Update',
+            dialog_id: 'update_task_dialog',
+            content_creator: dialogs.update_task_dialog,
+            attach_to: 'update_task_button',
+            data_id: {{ task.id }},
+            related_field_updater: function(){
+                var content_pane = pieChart.getParent();
+                if (content_pane){
+                    console.log(content_pane);
+                    content_pane.refresh();
+                }
+            }
+        });
+        update_task_button.startup();
+
+        gotoLink();
+
+    });
+</script>
