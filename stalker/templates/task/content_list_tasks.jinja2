@@ -1,0 +1,544 @@
+{# Stalker a Production Asset Management System
+ Copyright (C) 2009-2013 Erkan Ozgur Yilmaz
+ 
+ This file is part of Stalker.
+ 
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation;
+ version 2.1 of the License.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+#}
+
+
+{# TEMPLATES #}
+
+<div id="gantEditorTemplates" style="display:none;">
+    <div class="__template__" type="TASKSEDITHEAD"><!--
+    <table class="gdfTable" cellspacing="0" cellpadding="0" style='width: 1000px'>
+      <thead>
+      <tr style="height:40px">
+        <th class="gdfColHeader gdfResizable" style="width:20px;"></th>
+        <th class="gdfColHeader gdfResizable" style="width:20px;">id</th>
+        <th class="gdfColHeader gdfResizable" style="width:250px;">name</th>
+        <th class="gdfColHeader gdfResizable" style="width:75px;">start</th>
+        <th class="gdfColHeader gdfResizable" style="width:75px;">end</th>
+        <th class="gdfColHeader gdfResizable" style="width:35px;">timing</th>
+        <th class="gdfColHeader gdfResizable" style="width:100px;">depends</th>
+        <th class="gdfColHeader gdfResizable" style="width:400px; text-align: left;">resources</th>
+        <th class="gdfColHeader gdfResizable" style="width:745px;"></th>
+      </tr>
+      </thead>
+    </table>
+    --></div>
+    <div class="__template__" type="PROJECTROW"><!--
+  <tr projectId="(#=obj.id#)" class="projectEditRow" >
+    <th class="gdfCell" align="right"><span class="taskRowIndex">(#=obj.getRow()+1#)</span></th>
+    <td class="gdfCell" align="right"><span>(#=obj.id#)</span></td>
+    <td class="gdfCell indentCell" style="font-weight: bold">(#=obj.name#)</td>
+    <td class="gdfCell"><input type="text" name="start"  value="" class="date"></td>
+    <td class="gdfCell"><input type="text" name="end" value="" class="date"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell taskAssigs"></td>
+  </tr>
+--></div>
+
+    <div class="__template__" type="TASKROW"><!--
+  <tr taskId="(#=obj.id#)" class="taskEditRow">
+    <th class="gdfCell" align="right"><span class="taskRowIndex">(#=obj.getRow()+1#)</span></th>
+    <td class="gdfCell" align="right" style="background-color: (#=obj.progress >= 100 ? 'rgb(153, 255, 51)' : 'red'#)"><span>(#=obj.id#)</span></td>
+    <td class="gdfCell indentCell" style="padding-left:(#=obj.getParents().length*10#)px; (#=obj.getChildren().length>0?'font-weight: bold':''#)">(#=obj.link()#)</td>
+    <td class="gdfCell"><input type="text" name="start"  value="" class="date"></td>
+    <td class="gdfCell"><input type="text" name="end" value="" class="date"></td>
+    <td class="gdfCell"><input type="text" name="timing" value="(#=obj.schedule_model.toUpperCase()[0]#): (#=obj.schedule_timing#)(#=obj.schedule_unit#)"></td>
+    <td class="gdfCell">(#=obj.getDependsLinks()#)</td>
+    <td class="gdfCell">(#=obj.getResourcesLinks()#)</td>
+  </tr>
+--></div>
+
+
+    <div class="__template__" type="TASKEMPTYROW"><!--
+  <tr class="taskEditRow emptyRow" >
+    <th class="gdfCell" align="right"></th>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell" align="left"></td>
+    <td class="gdfCell"></td>
+  </tr>
+--></div>
+
+
+    <div class="__template__" type="PROJECTBAR"><!--
+  <div class="projectBox" projectId="(#=obj.id#)" >
+    <div class="layout">
+      <div class="projectLabel">(#=obj.link()#)</div>
+    </div>
+  </div>
+  --></div>
+
+
+    <div class="__template__" type="TASKBAR"><!--
+  <div class="taskBox" taskId="(#=obj.id#)" >
+    <div class="layout (#=obj.hasExternalDep?'extDep':''#)">
+      <div class="taskProgress" style="width:(#=obj.progress>100?100:obj.progress#)%;"></div>
+      <div class="taskExtraTiming" style="width:(#=(obj.schedule_timing - obj.bid_timing)/obj.schedule_timing*100#)%;;"></div>
+      <div class="taskScheduleModel"
+           style="position: absolute; text-align: center; width: 100%;">
+           (#=obj.schedule_model.toUpperCase()[0]#): (#=obj.schedule_timing#)(#=obj.schedule_unit#)
+      </div>
+      <div class="leafTaskContextMenu" taskId="(#=obj.id#)"></div>
+      
+      <div class="milestone (#=obj.startIsMilestone?'active':''#)" ></div>
+      <div class="taskLabel">(#=obj.link()#)</div>
+      <div class="milestone end (#=obj.endIsMilestone?'active':''#)"></div>
+      <div class="taskResourceLabel">(#=obj.getResourcesLinks()#)</div>
+    </div>
+  </div>
+  --></div>
+
+    <div class="__template__" type="PARENTTASKBAR"><!--
+  <div class="parentTaskBox" taskId="(#=obj.id#)">
+    <div class="layout (#=obj.hasExternalDep?'extDep':''#)">
+      <div class="parentTaskContextMenu" taskId="(#=obj.id#)"></div>
+      <div class="leftPin"></div>
+      <div class="rightPin"></div>
+      <div class="taskProgress" style="width:(#=obj.progress>100?100:obj.progress#)%;"></div>
+      <div class="taskBid" style="width:(#=obj.bid/obj.effort*100#)%; background-color:red;"></div>
+      <div class="milestone (#=obj.startIsMilestone?'active':''#)" ></div>
+      <div class="taskLabel">(#=obj.link()#)</div>
+      <div class="milestone end (#=obj.endIsMilestone?'active':''#)"></div>
+    </div>
+  </div>
+  --></div>
+
+    <div class="__template__" type='TASKLINK'><!--
+      <a href="javascript:redirectLinkInParent('(#=obj.type.toLowerCase()#)s_content_pane','view/(#=obj.type.toLowerCase()#)/(#=obj.id#)');">(#=obj.name#) ((#=obj.type#))</a>
+    --></div>
+
+    <div class="__template__" type='RESOURCELINK'><!--
+    <a href="javascript:redirectLink('central_content','view/user/(#=obj.id#)');">(#=obj.name#)</a>
+    --></div>
+    
+    <div class="__template__" type='PROJECTLINK'><!--
+    <a href="javascript:redirectLink('central_content','view/project/(#=obj.id#)');">(#=obj.name#) ((#=obj.type#))</a>
+    --></div>
+
+</div>
+
+
+{# BUTTONS #}
+<div style="float: left;">
+    <div style="float: left;">
+            <div style="float: left;">
+                {% if has_permission('Create_Task') %}
+                    <button id='list_tasks_create_task_button'>Create Task</button>
+                {% endif %}
+                <button id='list_tasks_gantt_reload_button'>Reload</button>
+            </div>
+            <div style="width: 100px; float: left"></div>
+        <div style="float: left;">
+            <button id='list_tasks_zoom_out_button'>Zoom Out</button>
+            <button id='list_tasks_zoom_in_button'>Zoom In</button>
+        </div>
+        {% if has_permission('Update_Task') %}
+            <div style='float: right;'>
+                <button id="list_tasks_schedule_tasks_button">Schedule Tasks</button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{# GANTT CHART #}
+<div id="workSpace"
+     style="padding:0;
+      overflow-y:hidden;
+      overflow-x:hidden;
+      border:1px solid #e5e5e5;
+      position:relative;
+      margin:0 5px;
+      width:100%;
+      height:94%;">
+</div>
+
+<script type="text/javascript">
+    require([
+        'dijit/registry',
+
+        'dijit/form/Button',
+        'dijit/Menu',
+        'dijit/MenuItem',
+        'dijit/MenuSeparator',
+
+        'dojo/query',
+        'dojo/store/JsonRest',
+        'dojo/request/xhr',
+        'dojo/_base/lang',
+        'dojo/Deferred',
+        'dojo/when',
+
+        'stalker/dialogs',
+        'stalker/dialogCaller',
+        'stalker/dialogCreator',
+
+        'dojo/domReady!'
+    ], function (registry, Button, Menu, MenuItem, MenuSeparator, query,
+                 JsonRest, xhr, lang, Deferred, when, dialogs, dialogCaller,
+                 dialogCreator) {
+
+        $('#gantttemplates').loadTemplates();
+
+        var ge = new GanttMaster();
+        ge.init($("#workSpace"));
+        //console.debug(ge);
+
+        // The Memory
+        var tasks_memory;
+        tasks_memory = new JsonRest({
+            target: '{{ request.route_url('get_gantt_tasks', entity_id=entity.id) }}'
+        });
+
+
+        function loadGanttFromServer() {
+            tasks_memory.query().then(function (data) {
+                {% if entity.entity_type != 'User' %}
+                    data = lang.mixin(data, {'canWrite': 1, 'canWriteOnParent': 1});
+                {% endif %}
+
+                var promise = ge.loadGanttData(data, Deferred);
+                promise.then(function () {
+                    // now add the context menu to tasks
+
+                    // Standard menu items for Parent Tasks
+                    //
+                    // View Summary
+                    // ============
+                    // Update Task
+                    // Create Child Task
+                    // Create Dependent Task
+                    // ============
+                    // Delete
+                    // 
+
+                    // Standard menu items for Leaf Tasks
+                    //
+                    // View Summary
+                    // ============
+                    // Update Task
+                    // Create Child Task
+                    // Create Dependent Task
+                    // Create TimeLog
+                    // ============
+                    // Delete
+                    // 
+
+
+                    {# PARENT TASK MENU #}
+                    var parent_task_menu = new Menu({
+                        targetNodeIds: ['workSpace'],
+                        selector: '.parentTaskContextMenu'
+                    });
+
+
+                    {# LEAF TASK MENU #}
+                    var leaf_task_menu = new Menu({
+                        targetNodeIds: ['workSpace'],
+                        selector: '.leafTaskContextMenu'
+                    });
+
+
+                    {# MENU ITEMS #}
+
+                    {# TASK SUMMARY #}
+                    var view_task_summary_menuItem_creator = function () {
+                        return new MenuItem({
+                            label: 'View Task Summary',
+                            onClick: function () {
+                                var node = this.getParent().currentTarget;
+                                // get task id
+                                var taskId = node.getAttribute('taskid');
+
+                                var contentPane = registry.byId('tasks_content_pane');
+                                contentPane.set(
+                                        'href',
+                                        'view/task/' + taskId
+                                );
+                                contentPane.refresh();
+                            }
+                        });
+                    };
+
+                    leaf_task_menu.addChild(view_task_summary_menuItem_creator());
+                    parent_task_menu.addChild(view_task_summary_menuItem_creator());
+
+                    {% if has_permission('Update_Task') %}
+
+                        parent_task_menu.addChild(new MenuSeparator());
+                        leaf_task_menu.addChild(new MenuSeparator());
+
+                        var update_task_menuItem_creator = function () {
+                            return new MenuItem({
+                                label: 'Update Task',
+                                onClick: function () {
+
+                                    var node = this.getParent().currentTarget;
+                                    var taskId = node.getAttribute('taskId');
+
+                                    {#                                        saveGanttOnServer().then(function(){#}
+                                    // create and call update_task dialog
+                                    var dialog = dialogCreator({
+                                        dialog_id: 'task_dialog',
+                                        data_id: taskId,
+                                        content_creator: dialogs.update_task_dialog,
+                                        related_field_updater: loadGanttFromServer
+                                    });
+
+                                    dialog.show();
+                                    {#                                        });#}
+                                }
+                            });
+                        };
+
+                        parent_task_menu.addChild(update_task_menuItem_creator());
+                        leaf_task_menu.addChild(update_task_menuItem_creator());
+                        {% endif %}
+
+                    {% if has_permission('Create_Task') %}
+                        var create_child_task_menuItem_creator = function () {
+                            return new MenuItem({
+                                label: 'Create Child Task',
+                                onClick: function () {
+                                    var node = this.getParent().currentTarget;
+                                    var taskId = node.getAttribute('taskId');
+
+                                    {#                                        saveGanttOnServer().then(function(){#}
+                                    var dialog = dialogCreator({
+                                        dialog_id: 'task_dialog',
+                                        data_id: taskId,
+                                        content_creator: dialogs.create_child_task_dialog,
+                                        related_field_updater: loadGanttFromServer
+                                    });
+
+                                    dialog.show();
+                                    {#                                        });#}
+                                }
+                            });
+                        };
+
+                        parent_task_menu.addChild(create_child_task_menuItem_creator());
+                        leaf_task_menu.addChild(create_child_task_menuItem_creator());
+
+
+                        var create_dependent_task_menuItem_creator = function () {
+                            return new MenuItem({
+                                label: 'Create Dependent Task',
+                                onClick: function () {
+                                    var node = this.getParent().currentTarget;
+                                    var taskId = node.getAttribute('taskId');
+
+                                    {#                                        saveGanttOnServer().then(function(){#}
+                                    var dialog = dialogCreator({
+                                        dialog_id: 'task_dialog',
+                                        data_id: taskId,
+                                        content_creator: dialogs.create_dependent_task_dialog,
+                                        related_field_updater: loadGanttFromServer
+                                    });
+                                    dialog.show();
+                                    {#                                        });#}
+
+                                }
+                            });
+                        };
+
+                        parent_task_menu.addChild(create_dependent_task_menuItem_creator());
+                        leaf_task_menu.addChild(create_dependent_task_menuItem_creator());
+
+                    {% endif %}
+                    
+                    {% if has_permission('Create_TimeLog') %}
+                        var create_time_log_menuItem_creator = function () {
+                            return new MenuItem({
+                                label: 'Create TimeLog',
+                                onClick: function () {
+                                    var node = this.getParent().currentTarget;
+                                    var taskId = node.getAttribute('taskId');
+    
+                                    // check if it is a leaf task
+                                    var task = ge.getTask(taskId);
+                                    //console.debug(task);
+    
+                                    if (task.isParent()) {
+                                        // warn the user and return
+                                        alert('This is a container Task,\n' +
+                                                'You can not enter any time_logs for\n' +
+                                                'container Tasks!');
+                                        return;
+                                    }
+    
+                                    {#                                    saveGanttOnServer().then(function(){#}
+                                    var dialog = dialogCreator({
+                                        dialog_id: 'time_log_dialog',
+                                        data_id: taskId,
+                                        content_creator: dialogs.create_time_log_dialog,
+                                        related_field_updater: loadGanttFromServer
+                                    });
+                                    dialog.show();
+                                    {#                                    });#}
+                                }
+                            })
+                        };
+    
+                        leaf_task_menu.addChild(create_time_log_menuItem_creator());
+                    {% endif %}
+
+                    {% if has_permission('Delete_Task') %}
+
+                        parent_task_menu.addChild(new MenuSeparator());
+                        leaf_task_menu.addChild(new MenuSeparator());
+
+
+                        var delete_task_menuItem_creator = function () {
+                            return new MenuItem({
+                                label: 'Delete Task'
+                            });
+                        };
+
+                        parent_task_menu.addChild(delete_task_menuItem_creator());
+                        leaf_task_menu.addChild(delete_task_menuItem_creator());
+
+
+                    {% endif %}
+
+                    leaf_task_menu.startup();
+                    parent_task_menu.startup();
+
+
+                });
+            });
+        }
+
+        loadGanttFromServer();
+
+        function loadI18n() {
+            GanttMaster.messages = {
+                "CHANGE_OUT_OF_SCOPE": "NO_RIGHTS_FOR_UPDATE_PARENTS_OUT_OF_EDITOR_SCOPE",
+                "START_IS_MILESTONE": "START_IS_MILESTONE",
+                "END_IS_MILESTONE": "END_IS_MILESTONE",
+                "TASK_HAS_CONSTRAINTS": "TASK_HAS_CONSTRAINTS",
+                "GANTT_ERROR_DEPENDS_ON_OPEN_TASK": "GANTT_ERROR_DEPENDS_ON_OPEN_TASK",
+                "GANTT_ERROR_DESCENDANT_OF_CLOSED_TASK": "GANTT_ERROR_DESCENDANT_OF_CLOSED_TASK",
+                "TASK_HAS_EXTERNAL_DEPS": "TASK_HAS_EXTERNAL_DEPS",
+                "GANTT_ERROR_LOADING_DATA_TASK_REMOVED": "GANTT_ERROR_LOADING_DATA_TASK_REMOVED",
+                "ERROR_SETTING_DATES": "ERROR_SETTING_DATES",
+                "CIRCULAR_REFERENCE": "CIRCULAR_REFERENCE",
+                "CANNOT_DEPENDS_ON_ANCESTORS": "CANNOT_DEPENDS_ON_ANCESTORS",
+                "CANNOT_DEPENDS_ON_DESCENDANTS": "CANNOT_DEPENDS_ON_DESCENDANTS",
+                "INVALID_DATE_FORMAT": "INVALID_DATE_FORMAT",
+                "TASK_MOVE_INCONSISTENT_LEVEL": "TASK_MOVE_INCONSISTENT_LEVEL",
+
+                "GANTT_QUARTER_SHORT": "Q",
+                "GANTT_SEMESTER_SHORT": "S"
+            };
+        }
+
+        //-------------------------------------------  Get project file as JSON (used for migrate project from gantt to Teamwork) ------------------------------------------------------
+        function getFile() {
+            var gimBaPrj = $("#gimBaPrj");
+            gimBaPrj.val(JSON.stringify(ge.saveGantt()));
+            $("#gimmeBack").submit();
+            gimBaPrj.val("");
+        }
+
+        {% if has_permission('Create_Task') %}
+            // CREATE TASK
+            var create_task_button = dialogCaller({
+                label: 'Create Task',
+                dialog_id: 'task_dialog',
+                content_creator: dialogs.create_task_dialog,
+                attach_to: 'list_tasks_create_task_button',
+                related_field_updater: loadGanttFromServer,
+                data_id: '{{ entity.id }}'
+            });
+            create_task_button.startup();
+        {% endif %}
+        
+        // RELOAD
+        var reload_gantt_button = new Button({
+            label: 'Reload',
+            onClick: function () {
+                loadGanttFromServer();
+            }
+        }, 'list_tasks_gantt_reload_button');
+        reload_gantt_button.startup();
+
+        // ZOOM OUT
+        var zoom_out_button = new Button({
+            label: 'Zoom Out',
+            onClick: function () {
+                ge.gantt.zoomGantt(false);
+            }
+        }, 'list_tasks_zoom_out_button');
+        zoom_out_button.startup();
+
+        // ZOOM IN
+        var zoom_in_button = new Button({
+            label: 'Zoom In',
+            onClick: function () {
+                ge.gantt.zoomGantt(true);
+            }
+        }, 'list_tasks_zoom_in_button');
+        zoom_in_button.startup();
+
+        // SCHEDULE
+        {% if has_permission('Update_Task') %}
+            var schedule_tasks_button = new Button({
+                label: 'Schedule Tasks',
+                onClick: function () {
+                    
+                    
+                    var do_schedule = function () {
+                        // xhr.post returns a `promise` use it if needed
+                        // show the busy dialog
+                        var busy_dialog = dialogs.busy_dialog({
+                            id: 'schedule_tasks_busy_dialog'
+                        });
+                        busy_dialog.show();
+                        return xhr.post(
+                            '{{ request.route_url('auto_schedule_tasks') }}',
+                            {
+                                method: 'POST'
+                            }
+                        );
+                    };
+                    
+                    var do_load = function () {
+                        // reload scheduled tasks
+                        loadGanttFromServer();
+                        // kill the busy dialog
+                        var busy_dialog = dijit.byId('schedule_tasks_busy_dialog');
+                        busy_dialog.destroyRecursive();
+                    };
+                    
+                    when(do_schedule(), do_load);
+            
+                }
+            }, 'list_tasks_schedule_tasks_button');
+            schedule_tasks_button.startup();
+        {% endif %}
+
+
+
+    });
+</script>
