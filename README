@@ -1,0 +1,53 @@
+=====
+About
+=====
+
+Stalker is an Open Source Production Asset Management (ProdAM) System designed 
+specifically for Animation and VFX Studios but can be used for any kind of
+projects. Stalker is licensed under LGPL v2.1.
+
+Features:
+ * Designed for animation and VFX Studios.
+ * It is a Pyramid Web Application and also SOM (Stalker Object Model) API can
+   be used as a Python library.
+ * Platform independent.
+ * Default installation handles nearly all the asset and project management 
+   needs of an animation and vfx studio.
+ * Customizable with configuration scripts.
+ * Customizable object model (Stalker Object Model - SOM).
+ * Uses TaskJuggler as the project planing and tracking backend.
+ * Can be used with any kind of databases supported by SQLAlchemy.
+ * Can be connected to all the major 3d animation packages like Maya, Houdini,
+   Nuke, XSI, Vue, Blender etc. and any application that has a Python API.
+ * Can work as a stand-alone application.
+
+Stalker is build over these other OpenSource projects:
+ * Python
+ * Pyramid
+ * SQLAlchemy and Alembic
+ * Jinja2
+ * TaskJuggler
+
+
+.. Getting Started
+   ===============
+   
+   - cd <directory containing this file>
+   
+   - $venv/bin/python setup.py develop
+   
+   - $venv/bin/populate_stalker development.ini
+   
+   - $venv/bin/pserve development.ini
+
+
+Source
+======
+
+The latest development version is available in `Google Project page of
+Stalker`_ or can be directly cloned with the following command if you already
+have mercurial installed::
+
+  hg clone https://stalker.googlecode.com/hg/ stalker
+
+.. _Google Project page of Stalker: http://code.google.com/p/stalker/
