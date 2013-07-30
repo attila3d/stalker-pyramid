@@ -158,7 +158,7 @@ def get_color_as_int(request, attr_name):
 
 def get_tags(request):
     """Extracts Tags from the given request
-    
+
     :param request: Request object
     :return: A list of stalker.models.tag.Tag instances
     """

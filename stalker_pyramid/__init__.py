@@ -21,7 +21,10 @@
 Stalker Pyramid is a Production Asset Management System (ProdAM) designed for
 Animation and VFX Studios. See docs for more information.
 """
+from dogpile.cache import make_region
 from zope.sqlalchemy import ZopeTransactionExtension
+from stalker_pyramid.cache import caching_query
+from stalker_pyramid.cache.caching_query import RelationshipCache
 
 __version__ = '0.1.0.b1'
 
@@ -34,7 +37,9 @@ import logging
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
+logger.setLevel(logging.DEBUG)
+
+cache_address_bits = None
 
 
 def main(global_config, **settings):
@@ -49,9 +54,35 @@ def main(global_config, **settings):
     from stalker.db import DBSession
 
     # use the ZopeTransactionExtension for session
+
+    # from stalker.models.task import Task
+    # cache_address_bits = RelationshipCache(Task.children, "default").\
+    #             and_(
+    #                 RelationshipCache(Task.parent, "default")
+    #             )
+
+    from stalker_pyramid.cache.environment import regions
+    from stalker_pyramid.cache import local_session_caching
+    # from dogpile.cache.region import CacheRegion
+
     db.setup(settings)
     DBSession.remove()
-    DBSession.configure(extension=ZopeTransactionExtension())
+    DBSession.configure(
+        extension=ZopeTransactionExtension(),
+        query_cls=caching_query.query_callable(regions)
+    )
+
+    # set up a region based on the ScopedSessionBackend,
+    # pointing to the scoped_session declared in the example
+    # environment.
+    regions['local_session'] = make_region().configure(
+        'sqlalchemy.session',
+        arguments={
+            "scoped_session": DBSession
+        }
+    )
+
+    logger.debug('regions: %s' % regions)
 
     # setup authorization and authentication
     authn_policy = AuthTktAuthenticationPolicy(

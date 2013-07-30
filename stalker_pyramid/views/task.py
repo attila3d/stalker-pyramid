@@ -32,6 +32,7 @@ from stalker import (User, Task, Entity, Project, StatusList, Status,
                      TaskJugglerScheduler, Studio, Asset, Shot, Sequence, Type)
 from stalker.models.task import CircularDependencyError
 from stalker import defaults
+from stalker_pyramid.cache.caching_query import FromCache
 from stalker_pyramid.views import (PermissionChecker, get_logged_in_user,
                                    get_multi_integer, milliseconds_since_epoch,
                                    get_date)
@@ -691,7 +692,15 @@ def get_tasks(request):
     # set the content range to prevent JSONRest Store to query the data twice
     content_range = '%s-%s/%s'
     if task_id:
-        task = Entity.query.filter(Entity.id == task_id).first()
+        q = Entity.query.options(FromCache("default")).filter(Entity.id == task_id)
+        value = q.all()
+        q.set_value(value)
+        task = q.first()
+
+        cache, key = q._get_cache_plus_key()
+        logger.debug('q._get_cache_plus_key() : %s, %s' % (cache, key))
+        logger.debug('cache[key]: %s' % cache.get(key))
+
         if isinstance(task, Project):
             return_data = convert_to_dgrid_gantt_project_format([task])
             content_range = content_range % (0, 0, 1)
@@ -699,12 +708,25 @@ def get_tasks(request):
             return_data = convert_to_dgrid_gantt_task_format([task])
             content_range = content_range % (0, 0, 1)
     elif parent_id:
-        parent = Entity.query.filter(Entity.id == parent_id).first()
+        q = Entity.query.options(FromCache("default")).filter(Entity.id == parent_id)
+        q.set_value(q.all())
+        parent = q.first()
+
+        cache, key = q._get_cache_plus_key()
+        logger.debug('q._get_cache_plus_key() : %s, %s' % (cache, key))
+        logger.debug('cache[key]: %s' % cache.get(key))
 
         if isinstance(parent, Project):
             tasks = parent.root_tasks
         elif isinstance(parent, Task):
-            tasks = Task.query.filter(Task.parent_id == parent_id).order_by(Task.name).all()
+            q = Task.query.options(FromCache("default")).filter(Task.parent_id == parent_id).order_by(Task.name)
+            tasks = q.all()
+            q.set_value(tasks)
+
+            cache, key = q._get_cache_plus_key()
+            logger.debug('q._get_cache_plus_key() : %s, %s' % (cache, key))
+            logger.debug('cache[key]: %s' % cache.get(key))
+
 
         content_range = content_range % (0, len(tasks) - 1, len(tasks))
         # logger.debug(tasks)
@@ -714,6 +736,8 @@ def get_tasks(request):
         json_body=return_data
     )
     resp.content_range = content_range
+
+    
     return resp
 
 
