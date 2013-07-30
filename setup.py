@@ -9,7 +9,7 @@ CHANGES = open(os.path.join(here, 'CHANGELOG')).read()
 
 requires = [
     'pyramid>=1.4',
-    #'sqlalchemy>=0.8',
+    'sqlalchemy>=0.8',
     #'alembic',
     'transaction',
     'pyramid_tm',
@@ -20,7 +20,9 @@ requires = [
     'pyramid_jinja2',
     #'unittest2',
     #'sphinx==1.1.3',
-    'stalker>=0.2.0.rc1'
+    'stalker>=0.2.0.rc1',
+    'dogpile',
+    'dogpile.cache',
 ]
 
 setup(name='stalker_pyramid',
