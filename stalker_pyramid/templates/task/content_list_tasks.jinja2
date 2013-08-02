@@ -1,0 +1,649 @@
+{# Stalker Pyramid a Web Base Production Asset Management System
+ Copyright (C) 2009-2013 Erkan Ozgur Yilmaz
+ 
+ This file is part of Stalker Pyramid.
+ 
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation;
+ version 2.1 of the License.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+#}
+
+{# BUTTONS #}
+<div style="float: left;">
+    <div style="float: left;">
+        <div style="float: left;">
+            {% if has_permission('Create_Task') %}
+                <button id='list_tasks_create_task_button'>Create Task</button>
+            {% endif %}
+            <button id='list_tasks_gantt_reload_button'>Reload</button>
+        </div>
+        <div style="width: 100px; float: left"></div>
+        {% if has_permission('Update_Task') %}
+            <div style='float: left;'>
+                <button id="list_tasks_schedule_tasks_button">Schedule Tasks
+                </button>
+            </div>
+        {% endif %}
+        <div style='float: left;'> {# gantt boundries #}
+            <div style="float: left">
+                <div style='float: left;'>Start :</div>
+                <div id='gantt_start_date' style='float: left;'></div>
+            </div>
+            <div style="float: left">
+                <div style='float: left;'>End</div>
+                <div id='gantt_end_date' style='float: left;'></div>
+            </div>
+            <div style="float: left">
+                <div style='float: left;'>Grid Mode</div>
+                <div id='grid_mode' style='float: left;'></div>
+            </div>
+            <div style="float: left">
+                <div style='float: left;'>Gantt Mode</div>
+                <div id='gantt_mode' style='float: left;'></div>
+            </div>
+            <div style="float: left;">
+                <button id='list_tasks_refresh_button'>Refresh</button>
+                <button id='list_tasks_go_to_today_button'>Go To Today</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style='width:100%; height: 94%; position: absolute; margin-top: 30px;'>
+    <div id="gantt" style="position: static; width: 100%; height: 100%;"></div>
+</div>
+
+
+<script type="text/javascript">
+    require([
+        'dijit/registry',
+
+        'dijit/form/Button',
+        'dijit/form/FilteringSelect',
+        'dijit/Menu',
+        'dijit/MenuItem',
+        'dijit/MenuSeparator',
+        'dijit/form/DateTextBox',
+        'dijit/Tooltip',
+
+        'dojo/cookie',
+        'dojo/json',
+        'dojo/query',
+        'dojo/store/Cache',
+        'dojo/store/Memory',
+        'dojo/store/JsonRest',
+        'dojo/request/xhr',
+        'dojo/_base/lang',
+        'dojo/Deferred',
+        'dojo/when',
+        'dojo/date',
+
+        "dgrid/List",
+        "dgrid/Grid",
+        'dojox/data/JsonRestStore',
+
+        'stalker/dialogs',
+        'stalker/dialogCaller',
+        'stalker/dialogCreator',
+        'stalker/GanttGrid',
+
+        'dojo/domReady!'
+    ], function (registry, Button, FilteringSelect, Menu, MenuItem,
+                 MenuSeparator, DateTextBox, Tooltip, cookie, json, query,
+                 Cache, Memory, JsonRest, xhr, lang, Deferred,
+                 when, date, List, Grid,
+                 JsonRestStore, dialogs, dialogCaller, dialogCreator,
+                 GanttGrid) {
+
+
+        var createTaskToolTips = function(){
+            // create tool tip dialogs for task info
+            new Tooltip({
+                connectId: ['gantt'],
+                selector: '.leafTaskContextMenu',
+                getContent: function (node) {
+                    var dataId = node.getAttribute('dataId');
+                    var hierarchy_name = node.getAttribute('hierarchy_name');
+                    var name = node.getAttribute('name');
+                    var type = node.getAttribute('type');
+                    var start = new Date(parseInt(node.getAttribute('start')));
+                    var end = new Date(parseInt(node.getAttribute('end')));
+                    var schedule_model = node.getAttribute('schedule_model');
+    
+                    if (schedule_model){
+                        schedule_model = schedule_model.charAt(0).toUpperCase() + schedule_model.substr(1).toLowerCase();
+                    }
+
+                    var schedule_timing =  (parseFloat(node.getAttribute('schedule_timing'))).toFixed(1);
+                    var schedule_unit = node.getAttribute('schedule_unit');
+                    var bid_timing = node.getAttribute('bid_timing');
+                    var bid_unit = node.getAttribute('bid_unit');
+
+                    var description = node.getAttribute('description');
+
+                    var priority = node.getAttribute('priority');
+
+                    var remaining_seconds = node.getAttribute('remaining_seconds');
+
+                    return '<table>' +
+                            '<thead style="text-align: center">' +
+                                '<h4>'+hierarchy_name+'</h4>' +
+                                '<h3>' + name + ' (' + type + ')</h3>' +
+    
+                            '</thead>' +
+                            '<tbody>' +
+                            '<tr>' +
+                                '<td class="label_column">Id</td>' +
+                                '<td class="input_column">' + dataId + '</td>' +
+                            '</tr>' +
+                            '<tr>' +
+                                '<td class="label_column">Priority</td>' +
+                                '<td class="input_column">' + priority + '</td>' +
+                            '</tr>' +
+                            '<tr>' +
+                                '<td class="label_column">BID</td>' +
+                                '<td class="input_column">' + bid_timing +' '+ bid_unit + '</td>' +
+                            '</tr>' +
+                            '<tr>' +
+                                '<td class="label_column">' + schedule_model + '</td>' +
+                                '<td class="input_column">' + schedule_timing + ' ' + schedule_unit + '</td>' +
+                            '</tr>' +
+                            '<tr>' +
+                                '<td class="label_column">Start</td>' +
+                                '<td class="input_column">' + start.format("yyyy-mm-dd HH:00") + '</td>' +
+                            '</tr>' +
+                            '<tr>' +
+                                '<td class="label_column">End</td>' +
+                                '<td class="input_column">' + end.format("yyyy-mm-dd HH:00") + '</td>' +
+                            '</tr>' +
+                            '<tr>' +
+                                '<td class="label_column">Description</td>' +
+                                '<td class="input_column">' + description + '</td>' +
+                            '</tr>' +
+                            '<tr>' +
+                                '<td class="label_column">Remaining Time</td>' +
+                                '<td class="input_column">' + remaining_seconds + '</td>' +
+                            '</tr>' +
+                            '</tbody>' +
+                            '</table>';
+                }
+            });
+        };
+
+
+        var create_contextMenus = function () {
+           // create tool tip dialogs
+            createTaskToolTips();
+
+            // now add the context menu to tasks
+
+            // Standard menu items for Parent Tasks
+            //
+            // View Summary
+            // ============
+            // Update Task
+            // Create Child Task
+            // Create Dependent Task
+            // ============
+            // Duplicate Task Hierarchy
+            // ============
+            // Delete
+            // 
+
+            // Standard menu items for Leaf Tasks
+            //
+            // View Summary
+            // ============
+            // Update Task
+            // Create Child Task
+            // Create Dependent Task
+            // Create TimeLog
+            // ============
+            // Delete
+            // 
+
+
+            {# PARENT TASK MENU #}
+            var parent_taskbar_menu = new Menu({
+                targetNodeIds: ['gantt'],
+                selector: '.parentTaskContextMenu'
+            });
+
+            var parent_taskrow_menu = new Menu({
+                targetNodeIds: ['gantt'],
+                selector: '.parentTaskEditRow'
+            });
+
+
+            {# LEAF TASK MENU #}
+            var leaf_taskbar_menu = new Menu({
+                targetNodeIds: ['gantt'],
+                selector: '.leafTaskContextMenu'
+            });
+
+            var leaf_taskrow_menu = new Menu({
+                targetNodeIds: ['gantt'],
+                selector: '.taskEditRow'
+            });
+
+
+            {# MENU ITEMS #}
+            {# SCROLL TO TASK #}
+            var scroll_to_task_creator = function(){
+                return new MenuItem({
+                    label: 'Scroll To Task',
+                    onClick: function(){
+                        var node = this.getParent().currentTarget;
+                        // get start date
+                        var start = node.getAttribute('start');
+                        console.debug('start :', start);
+                        gantt_column.scrollToDate(start);
+                    }
+                })
+            };
+            leaf_taskbar_menu.addChild(scroll_to_task_creator());
+            parent_taskbar_menu.addChild(scroll_to_task_creator());
+            leaf_taskrow_menu.addChild(scroll_to_task_creator());
+            parent_taskrow_menu.addChild(scroll_to_task_creator());
+
+            {# TASK SUMMARY #}
+            var view_task_summary_menuItem_creator = function () {
+                return new MenuItem({
+                    label: 'View Task Summary',
+                    onClick: function () {
+                        var node = this.getParent().currentTarget;
+                        // get task id
+                        var dataId = node.getAttribute('dataId');
+
+                        var contentPane = registry.byId('tasks_content_pane');
+                        contentPane.set(
+                                'href',
+                                'view/task/' + dataId
+                        );
+                        contentPane.refresh();
+                    }
+                });
+            };
+
+            leaf_taskbar_menu.addChild(view_task_summary_menuItem_creator());
+            parent_taskbar_menu.addChild(view_task_summary_menuItem_creator());
+            leaf_taskrow_menu.addChild(view_task_summary_menuItem_creator());
+            parent_taskrow_menu.addChild(view_task_summary_menuItem_creator());
+
+            {% if has_permission('Update_Task') %}
+
+                parent_taskbar_menu.addChild(new MenuSeparator());
+                leaf_taskbar_menu.addChild(new MenuSeparator());
+                parent_taskrow_menu.addChild(new MenuSeparator());
+                leaf_taskrow_menu.addChild(new MenuSeparator());
+
+                var update_task_menuItem_creator = function () {
+                    return new MenuItem({
+                        label: 'Update Task',
+                        onClick: function () {
+
+                            var node = this.getParent().currentTarget;
+                            var dataId = node.getAttribute('dataId');
+
+                            {#                                        saveGanttOnServer().then(function(){#}
+                            // create and call update_task dialog
+                            var dialog = dialogCreator({
+                                dialog_id: 'task_dialog',
+                                data_id: dataId,
+                                content_creator: dialogs.update_task_dialog,
+                                related_field_updater: gantt_column.refresh
+                            });
+
+                            dialog.show();
+                            {#                                        });#}
+                        }
+                    });
+                };
+
+                parent_taskbar_menu.addChild(update_task_menuItem_creator());
+                leaf_taskbar_menu.addChild(update_task_menuItem_creator());
+                parent_taskrow_menu.addChild(update_task_menuItem_creator());
+                leaf_taskrow_menu.addChild(update_task_menuItem_creator());
+            {% endif %}
+
+            {% if has_permission('Create_Task') %}
+                var create_child_task_menuItem_creator = function () {
+                    return new MenuItem({
+                        label: 'Create Child Task',
+                        onClick: function () {
+                            var node = this.getParent().currentTarget;
+                            var dataId = node.getAttribute('dataId');
+
+                            {#                                        saveGanttOnServer().then(function(){#}
+                            var dialog = dialogCreator({
+                                dialog_id: 'task_dialog',
+                                data_id: dataId,
+                                content_creator: dialogs.create_child_task_dialog,
+                                related_field_updater: gantt_column.refresh
+                            });
+
+                            dialog.show();
+                            {#                                        });#}
+                        }
+                    });
+                };
+
+                parent_taskbar_menu.addChild(create_child_task_menuItem_creator());
+                leaf_taskbar_menu.addChild(create_child_task_menuItem_creator());
+                parent_taskrow_menu.addChild(create_child_task_menuItem_creator());
+                leaf_taskrow_menu.addChild(create_child_task_menuItem_creator());
+
+
+                var create_dependent_task_menuItem_creator = function () {
+                    return new MenuItem({
+                        label: 'Create Dependent Task',
+                        onClick: function () {
+                            var node = this.getParent().currentTarget;
+                            var dataId = node.getAttribute('dataId');
+
+                            {#                                        saveGanttOnServer().then(function(){#}
+                            var dialog = dialogCreator({
+                                dialog_id: 'task_dialog',
+                                data_id: dataId,
+                                content_creator: dialogs.create_dependent_task_dialog,
+                                related_field_updater: gantt_column.refresh
+                            });
+                            dialog.show();
+                            {#                                        });#}
+
+                        }
+                    });
+                };
+
+                parent_taskbar_menu.addChild(create_dependent_task_menuItem_creator());
+                leaf_taskbar_menu.addChild(create_dependent_task_menuItem_creator());
+                parent_taskrow_menu.addChild(create_dependent_task_menuItem_creator());
+                leaf_taskrow_menu.addChild(create_dependent_task_menuItem_creator());
+
+            {% endif %}
+
+            {% if has_permission('Create_TimeLog') %}
+                var create_time_log_menuItem_creator = function () {
+                    return new MenuItem({
+                        label: 'Create TimeLog',
+                        onClick: function () {
+                            var node = this.getParent().currentTarget;
+                            var dataId = node.getAttribute('dataId');
+
+                            var dialog = dialogCreator({
+                                dialog_id: 'time_log_dialog',
+                                data_id: dataId,
+                                content_creator: dialogs.create_time_log_dialog,
+                                related_field_updater: gantt_column.refresh
+                            });
+                            dialog.show();
+
+                        }
+                    });
+                };
+
+                leaf_taskbar_menu.addChild(create_time_log_menuItem_creator());
+                leaf_taskrow_menu.addChild(create_time_log_menuItem_creator());
+            {% endif %}
+
+            {% if has_permission('Create_Task') %}
+
+                parent_taskbar_menu.addChild(new MenuSeparator());
+                leaf_taskbar_menu.addChild(new MenuSeparator());
+                parent_taskrow_menu.addChild(new MenuSeparator());
+                leaf_taskrow_menu.addChild(new MenuSeparator());
+
+
+                var duplicate_task_hierarchy_menuItem_creator = function () {
+                    return new MenuItem({
+                        label: 'Duplicate Task Hierarchy',
+                        onClick: function () {
+                            var node = this.getParent().currentTarget;
+                            var dataId = node.getAttribute('dataId');
+
+                            // duplicate the given task using XHR
+                            var deferred = xhr.post(
+                                'duplicate_task_hierarchy',
+                                {
+                                    'data': {
+                                        'task_id': dataId
+                                    }
+                                }
+                            );
+                            // refresh after it finishes
+                            deferred.then(function(){
+                                gantt_column.refresh();
+                            });
+                        }
+                    });
+                };
+
+                parent_taskbar_menu.addChild(duplicate_task_hierarchy_menuItem_creator());
+                leaf_taskbar_menu.addChild(duplicate_task_hierarchy_menuItem_creator());
+                parent_taskrow_menu.addChild(duplicate_task_hierarchy_menuItem_creator());
+                leaf_taskrow_menu.addChild(duplicate_task_hierarchy_menuItem_creator());
+
+            {% endif %}
+
+            {% if has_permission('Delete_Task') %}
+
+                parent_taskbar_menu.addChild(new MenuSeparator());
+                leaf_taskbar_menu.addChild(new MenuSeparator());
+                parent_taskrow_menu.addChild(new MenuSeparator());
+                leaf_taskrow_menu.addChild(new MenuSeparator());
+
+
+                var delete_task_menuItem_creator = function () {
+                    return new MenuItem({
+                        label: 'Delete Task'
+                    });
+                };
+
+                parent_taskbar_menu.addChild(delete_task_menuItem_creator());
+                leaf_taskbar_menu.addChild(delete_task_menuItem_creator());
+                parent_taskrow_menu.addChild(delete_task_menuItem_creator());
+                leaf_taskrow_menu.addChild(delete_task_menuItem_creator());
+
+            {% endif %}
+
+            leaf_taskbar_menu.startup();
+            parent_taskbar_menu.startup();
+            leaf_taskrow_menu.startup();
+            parent_taskrow_menu.startup();
+        };
+
+
+
+
+
+
+
+
+
+
+        // The Memory
+        var target = 'tasks/';
+        var tasks_memory_store = new Memory();
+
+        {% if entity.entity_type == 'User' %}
+            target = 'users/{{ entity.id }}/tasks/';
+        {% endif %}
+
+        var tasks_jsonRest_store;
+        tasks_jsonRest_store = new JsonRest({
+            target: target,
+            getChildren: function(parent, options){
+                return this.query({parent_id: parent.id}, options);
+            },
+            mayHaveChildren: function(parent){
+                return parent.hasChildren;
+            }
+        });
+        var tasks_cache_store = new Cache(tasks_jsonRest_store, tasks_memory_store);
+
+        var gantt_chart = new GanttGrid({
+            id: 'gantt_dgrid',
+            width: '100%',
+            autoHeight: true,
+            store: tasks_cache_store,
+            query: {
+                // initialize with the entity itself
+                task_id: {{ entity.id }}
+            },
+            loadingMessage: "<div style='float: left' class='dijitIconLoading'>&nbsp</div><div>Loading</div>",
+            noDataMessage: "",
+            pageSkip: 0,
+            cellNavigation: false
+        }, 'gantt');
+        gantt_chart.startup();
+
+        // create context menus and tooltip dialogs
+        create_contextMenus();
+
+        // get the grantt column
+        var gantt_column = gantt_chart.columnSets[1][0][0];
+        
+        {% if has_permission('Create_Task') %}
+            // CREATE TASK
+            var create_task_button = dialogCaller({
+                label: 'Create Task',
+                dialog_id: 'task_dialog',
+                content_creator: dialogs.create_task_dialog,
+                attach_to: 'list_tasks_create_task_button',
+                related_field_updater: gantt_column.refresh,
+                data_id: '{{ entity.id }}'
+            });
+            create_task_button.startup();
+        {% endif %}
+
+        // RELOAD
+        var reload_gantt_button = new Button({
+            label: 'Reload',
+            onClick: function () {
+                gantt_column.reload();
+            }
+        }, 'list_tasks_gantt_reload_button');
+        reload_gantt_button.startup();
+
+        // SCHEDULE
+        {% if has_permission('Update_Task') %}
+            var schedule_tasks_button = new Button({
+                label: 'Schedule Tasks',
+                onClick: function () {
+
+                    var do_schedule = function () {
+                        // xhr.post returns a `promise` use it if needed
+                        // show the busy dialog
+                        var busy_dialog = dialogs.busy_dialog({
+                            id: 'schedule_tasks_busy_dialog'
+                        });
+                        busy_dialog.show();
+                        return xhr.post(
+                                '{{ request.route_url('auto_schedule_tasks') }}',
+                                {
+                                    method: 'POST'
+                                }
+                        );
+                    };
+
+                    var do_load = function () {
+                        // reload scheduled tasks
+                        gantt_column.refresh();
+                        // kill the busy dialog
+                        var busy_dialog = dijit.byId('schedule_tasks_busy_dialog');
+                        busy_dialog.destroyRecursive();
+                    };
+
+                    when(do_schedule(), do_load);
+
+                }
+            }, 'list_tasks_schedule_tasks_button');
+            schedule_tasks_button.startup();
+        {% endif %}
+
+        var start_dateTextBox = new DateTextBox({
+            name: 'start',
+            label: 'Start Date',
+                        value: new Date(new Date().getTime() - 15552000000),// 15 * 24 * 60 * 60 * 1000, set it today + 15 by default
+            required: true,
+            datePattern: 'dd-mm-yyyy'
+        }, 'gantt_start_date');
+        start_dateTextBox.startup();
+
+        var end_dateTextBox = new DateTextBox({
+            name: 'end',
+            label: 'End Date',
+                        value: new Date(new Date().getTime() + 15552000000), // set it today + 15 by default
+            required: true,
+            datePattern: 'dd-mm-yyyy'
+        }, 'gantt_end_date');
+        end_dateTextBox.startup();
+
+        var grid_mode_filteringSelect = new FilteringSelect({
+            name: 'gantt_chart_grid_mode',
+            label: 'Grid Mode',
+            store: new Memory({
+                data: [
+                    {
+                        id: 'Task',
+                        name: 'Task'
+                    },
+                    {
+                        id: 'Resource',
+                        name: 'Resource'
+                    }
+                ]
+            }),
+            value: 'Task'
+        }, 'grid_mode');
+        grid_mode_filteringSelect.startup();
+
+        var gantt_mode_filteringSelect = new FilteringSelect({
+            name: 'gantt_chart_gantt_mode',
+            label: 'Gantt Mode',
+            store: new Memory({
+                data: [
+                    {
+                        id: 'Task',
+                        name: 'Task'
+                    },
+                    {
+                        id: 'TimeLog',
+                        name: 'TimeLog'
+                    }
+                ]
+            }),
+            value: 'Task'
+        }, 'gantt_mode');
+        gantt_mode_filteringSelect.startup();
+
+        var refresh_button = new Button({
+            label: 'Refresh',
+            onClick: function () {
+                var start = start_dateTextBox.getValue().getTime();
+                var end =  end_dateTextBox.getValue().getTime();
+                gantt_column.refresh({start: start, end: end});
+            }
+        }, 'list_tasks_refresh_button');
+        refresh_button.startup();
+
+        var go_to_today_button = new Button({
+            label: 'Go To Today',
+            onClick: function () {
+                gantt_column.centerOnToday();
+            }
+        }, 'list_tasks_go_to_today_button');
+        go_to_today_button.startup();
+
+    });
+</script>
