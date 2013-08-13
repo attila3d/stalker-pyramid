@@ -31,6 +31,11 @@ Stalker Pyramid Changes
 * **Fix:** Fixed Gantt Chart not showing completed parent tasks id column with
   a in green background.
 * **New:** Added menu for Projects in Gantt Chart.
+* **Fix:** The bugs after RESTful service scheme in appending user to different
+   types of entity are fixed.
+* **Fix:** In TimeLog UI, when updating a time log the remaining hours is
+   calculated correctly by first adding the updated time log duration to the
+   remaining time. Thus the ui shows the correct value after update.
 
 0.1.0.b2
 ========
