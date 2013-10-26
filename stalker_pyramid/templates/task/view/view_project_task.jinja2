@@ -1,23 +1,32 @@
 {% extends "base.jinja2" %}
 
-{# Pre-Header #}
+{#PRE-HEADER #}
 {% block pre_header %}
 
-    {% include 'task/list_tasks_preheader.jinja2' %}
+    {% include 'task/list/list_tasks_preheader.jinja2' %}
 
-    <link rel="stylesheet" href='{{ request.static_url("stalker_pyramid:static/ace/css/dropzone.css") }}' />
+     <link rel="stylesheet"
+          href='{{ request.static_url("stalker_pyramid:static/ace/css/fullcalendar.css") }}'/>
+    <link rel="stylesheet"
+          href='{{ request.static_url("stalker_pyramid:static/ace/css/bootstrap-timepicker.css") }}'/>
+    <link rel="stylesheet"
+          href='{{ request.static_url("stalker_pyramid:static/ace/css/datepicker.css") }}'/>
+    <link rel="stylesheet"
+          href='{{ request.static_url("stalker_pyramid:static/ace/css/daterangepicker.css") }}'/>
+
+
+{#    <link rel="stylesheet" href='{{ request.static_url("stalker_pyramid:static/ace/css/dropzone.css") }}' />#}
 
 {% endblock pre_header %}
 
-
-{# Sidebar #}
+{#SIDEBAR#}
 {% block sidebar %}
 
     {% include 'sidebar.jinja2' %}
 
 {% endblock sidebar %}
 
-{# Breadcrumbs #}
+{#BREADCRUMBS#}
 {% block breadcrumbs %}
 
     {% set listed_type=task.plural_class_name %}
@@ -26,15 +35,16 @@
 
 {% endblock breadcrumbs %}
 
-{# Modals #}
+{# MODALS #}
 {% block modals %}
     {% include '/modals/dialog_template.jinja2' %}
 {% endblock modals%}
 
-
-{# Page-Content #}
+{#PAGE-CONTENT#}
 {% block page_content %}
     <div class="row-fluid">
+
+
 
         <div class="media">
             <a class="pull-left" href="#"
@@ -75,8 +85,7 @@
                                     <div class="span3">
                                         <ul class="unstyled spaced">
                                             <li>
-                                                {{ task.start }} <i
-                                                    class="icon-long-arrow-right blue"></i> {{ task.end }}
+                                                {{ task.start }} <i class="icon-long-arrow-right blue"></i> {{ task.end }}
                                             </li>
 
                                             <li>
@@ -123,8 +132,13 @@
             <div class="tabbable">
                 <ul class="nav nav-tabs" id="task_tabs">
                     <li class="active">
-                        <a href="#task_dashboard" data-toggle="tab">
-                            <i class="icon-dashboard"></i> Dashboard
+                        <a href="#task_versions" data-toggle="tab">
+                            <i class="icon-archive"></i> Versions
+                        </a>
+                    </li>
+                    <li class="">
+                        <a href="#task_timelogs" data-toggle="tab">
+                            <i class="icon-dashboard"></i> Timelogs
                         </a>
                     </li>
                     <li class="">
@@ -132,11 +146,7 @@
                             <i class="icon-tasks"></i> Tasks
                         </a>
                     </li>
-                    <li class="">
-                        <a href="#task_versions" data-toggle="tab">
-                            <i class="icon-archive"></i> Versions
-                        </a>
-                    </li>
+
                     <li class="">
                         <a href="#task_references" data-toggle="tab">
                             <i class="icon-picture"></i> References
@@ -145,18 +155,20 @@
                 </ul>
 
 
-                <div id="myTabContent" class="tab-content">
-                    <div class="tab-pane fade active in" id="task_dashboard">
-                        task_dashboard
+                <div id="myTabContent" class="tab-content no-padding ">
+                    <div class="tab-pane fade active in" id="task_versions">
+
+                        <div class="row-fluid" id="version_table_row"></div>
+
+                    </div>
+                    <div class="tab-pane fade " id="task_timelogs">
+                        <div id="calendar"></div>
                     </div>
                     <div class="tab-pane fade" id="task_tasks">
                         {% set entity = task %}
-                        {% include 'task/list_tasks.jinja2' %}
+                        {% include 'task/list/list_tasks.jinja2' %}
                     </div>
-                    <div class="tab-pane fade" id="task_versions">
-                        {% set versions=task.versions %}
-                        {% include 'version/list_entity_versions.jinja2' %}
-                    </div>
+
                     <div class="tab-pane fade" id="task_references">
                         {% set references=task.references %}
                         {% include 'link/list_entity_references.jinja2' %}
@@ -171,6 +183,13 @@
 
 {#EXTRA-SCRIPTS#}
 {% block extrascripts %}
+
+    <script src='{{ request.static_url("stalker_pyramid:static/ace/js/jquery.dataTables.min.js") }}'></script>
+    <script src='{{ request.static_url("stalker_pyramid:static/ace/js/jquery.dataTables.bootstrap.js") }}'></script>
+
+
+
+
     <script src='{{ request.static_url("stalker_pyramid:static/ace/js/bootstrap-tag.min.js") }}'></script>
     <script type="text/javascript" src='{{ request.static_url("stalker_pyramid:static/ace/js/dropzone.min.js") }}'></script>
 
@@ -184,5 +203,49 @@
             });
         });
     </script>
+
+    {% include 'version/list_entity_versions.jinja2' %}
+    {% include 'calendar/calendar.jinja2' %}
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+
+            $.getJSON('/entities/{{ task.id }}/events/?keys=time_log').then(function (data) {
+
+
+                var events = [];
+
+
+                for (var i = 0; i < data.length; i++) {
+
+                    var start_date = new Date(parseInt(data[i].start));
+                    var end_date = new Date(parseInt(data[i].end));
+
+                    var event = {
+                        eId: data[i].id,
+                        entity_type: data[i].entity_type,
+                        title: data[i].title,
+                        start: start_date,
+                        end: end_date,
+                        className: data[i].className,
+                        allDay: data[i].allDay
+                    };
+
+
+
+
+
+                    events.push(event);
+
+                }
+
+                drawCalendar('calendar',events);
+
+
+            });
+        });
+    </script>
+
+
 
 {% endblock extrascripts %}
