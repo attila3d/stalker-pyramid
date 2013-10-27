@@ -1,0 +1,44 @@
+<div class='sidebar sidebar-fixed' id="sidebar">
+
+    <script type="text/javascript">
+        try {
+            ace.settings.check('sidebar', 'fixed')
+            ace.settings.check('sidebar', 'collapsed')
+        } catch (e) {
+        }
+    </script>
+
+    {% if entity.entity_type == 'User' %}
+
+        {% include 'auth/view/user_sidebar.jinja2' %}
+
+    {% elif entity.entity_type == 'Project' %}
+
+        {% include 'project/view/project_sidebar.jinja2' %}
+
+    {% elif entity.entity_type == 'Studio' %}
+
+        {% include 'studio/view/studio_sidebar.jinja2' %}
+
+    {% elif entity.entity_type == 'Task' or entity.entity_type == 'Asset'%}
+
+        {% include 'task/view/task_sidebar.jinja2' %}
+
+    {% endif %}
+
+    <div class="sidebar-collapse" id="sidebar-collapse">
+
+        <i class="icon-double-angle-left"
+           data-icon1="icon-double-angle-left"
+           data-icon2="icon-double-angle-right"></i>
+
+    </div>
+
+    <script type="text/javascript">
+        try {
+            ace.settings.check('sidebar', 'collapsed')
+        } catch (e) {
+        }
+    </script>
+
+</div>
