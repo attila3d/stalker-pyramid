@@ -87,6 +87,7 @@ def main(global_config, **settings):
     config.add_route('signin', '/signin')
     config.add_route('login', '/login')
     config.add_route('logout', '/logout')
+    config.add_route('test_bootstrap', '/testBootstrap')
 
     config.add_route('busy_dialog', 'dialog/busy')
     config.add_route('flash_message', '/flash_message')

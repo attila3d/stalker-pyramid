@@ -41,6 +41,12 @@ colors = {
     'Planning': 'grey'
 }
 
+@view_config(
+    route_name='test_bootstrap',
+    renderer='templates/test_bootstrap.jinja2'
+)
+def test_bootstrap(request):
+    return {}
 
 class StdErrToHTMLConverter():
     """Converts stderr, stdout messages of TaskJuggler to html
