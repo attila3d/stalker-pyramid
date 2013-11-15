@@ -211,6 +211,7 @@ def get_entity_projects(request):
             'thumbnail_full_path': project.thumbnail.full_path
             if project.thumbnail else None,
             'status': project.status.name,
+            'users_count': len(project.users),
             'percent_complete': project.percent_complete
         }
         for project in entity.projects
