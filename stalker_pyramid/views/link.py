@@ -61,6 +61,7 @@ def upload_files(request):
         c = StdErrToHTMLConverter(e)
         response = Response(c.html())
         response.status_int = 500
+        transaction.abort()
         return response
     else:
         # store the link object
@@ -306,7 +307,7 @@ def get_entity_references(request):
             'id': r[0],
             'full_path': r[1],
             'original_filename': r[2],
-            'thumbnail_path': r[3],
+            'thumbnail_full_path': r[3],
             'tags': r[4],
             'entity_id': r[5],
             'entity_name': r[6],
@@ -524,6 +525,7 @@ def delete_reference(request):
     else:
         response = Response('No ref with id : %i' % ref_id)
         response.status_int = 500
+        transaction.abort()
         return response
 
 

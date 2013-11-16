@@ -298,7 +298,7 @@ return true;
                                         // where to set the current thumbnail
                                         // update the thumbnail
                                         $.getJSON('/users/{{ user.id }}/').done(function (data2) {
-                                            var new_thumb_path = '/' + data2[0].thumbnail_path;
+                                            var new_thumb_path = '/' + data2[0].thumbnail_full_path;
                                             $('#avatar').attr('src', new_thumb_path);
                                             // also update side bar
                                             $('#user_sidebar_avatar').attr('src', new_thumb_path)

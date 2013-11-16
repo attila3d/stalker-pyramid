@@ -58,30 +58,24 @@
 
         {# ***************************************************************** #}
         {# Submit Button #}
-
-        $('#submit_button').on('click', function (e) {
-
+        var submit_button = $('#submit_button');
+        submit_button.on('click', function (e) {
             e.stopPropagation();
             e.preventDefault();
-
+    
+            submit_button.button('loading');
             var user_form = $('#user_form');
-
             if (user_form.validate()) {
-
-                alert('fdsfs')
-
                 $.post(
-                                user_form.attr('action'),
-                                user_form.serialize()
-                        ).done(function () {
-
-                            window.location.replace('{{ came_from }}');
-                        });
-
+                    user_form.attr('action'),
+                    user_form.serialize()
+                ).done (function () {
+                    window.location.assign('{{ came_from }}');
+                }).fail(function () {
+                    submit_button.button('reset');
+                });
             }
         });
-
-
     });
 
 
