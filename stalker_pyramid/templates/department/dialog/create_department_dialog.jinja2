@@ -245,21 +245,23 @@
         {# ***************************************************************** #}
         {# Submit Button #}
 
-        $('#dialog_template_submit_button').on('click', function (e) {
+        var submit_button = $('#dialog_template_submit_button');
+        submit_button.on('click', function (e) {
             e.stopPropagation();
             e.preventDefault();
 
+            submit_button.button('loading');
             var department_form = $('#department_form');
 
             if (department_form.validate()) {
-
                 $.post(
-                                department_form.attr('action'),
-                                department_form.serialize()
-                        ).done(function () {
-                            window.location.replace('{{ came_from }}');
-                        });
-
+                    department_form.attr('action'),
+                    department_form.serialize()
+                ).done(function () {
+                    window.location.assign('{{ came_from }}');
+                }).fail(function () {
+                    submit_button.button('reset');
+                });
             }
         });
 

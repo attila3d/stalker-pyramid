@@ -25,6 +25,7 @@ from pyramid.response import Response
 from pyramid.security import forget, remember
 from pyramid.view import view_config, forbidden_view_config
 from sqlalchemy import or_
+import transaction
 
 import stalker_pyramid
 from stalker import (defaults, User, Department, Group, Project, Entity,
@@ -115,30 +116,27 @@ def create_user(request):
             )
 
             logger.debug('***create user method ends ***')
-            response = Response('Task created successfully')
+            response = Response('User created successfully')
             response.status_int = 200
             return response
 
         except BaseException as e:
             # request.session.flash('error:' + e.message)
             # HTTPFound(location=came_from)
-            response = Response('BaseException: %s'%e.message)
-            response.status_int = 500
-            return response
+            transaction.abort()
+            return Response('BaseException: %s'%e.message, 500)
     else:
         logger.debug('not all parameters are in request.params')
         log_param(request, 'name')
         log_param(request, 'login')
         log_param(request, 'email')
         log_param(request, 'password')
-        HTTPServerError()
         
         response = Response('There are missing parameters: ')
         response.status_int = 500
         return response
 
-
-    response = Response('Task created successfully')
+    response = Response('User created successfully')
     response.status_int = 200
     return response
 

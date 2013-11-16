@@ -26,7 +26,7 @@
 
         <div>
             <img class="pull-left"
-                 src="{{=it.thumbnail_path }}">
+                 src="{{=it.thumbnail_full_path }}">
 
             <div class="user">{{=it.name }}</div>
 
@@ -56,20 +56,18 @@
 
         var selected_items = [];
         for (var i = 0; i < data_ids.length; i++) {
-
             var selected = $('#stack_item_' + data_ids[i]).attr('sel');
 
             if (selected != "") {
                 selected_items.push(data_ids[i]);
             }
-
         }
 
         $.post(
-                "{{ request.route_url('append_entities_to_entity', id=entity.id) }}",
-                {'selected_items': selected_items}
+            "{{ request.route_url('append_entities_to_entity', id=entity.id) }}",
+            {'selected_items': selected_items}
         ).done(function(){
-            window.location.replace('{{ came_from }}');
+            window.location.assign('{{ came_from }}');
         });
     }
 
@@ -110,11 +108,11 @@
 
                     data_ids.push(data[i].id)
 
-                    if (data[i].thumbnail_path == null) {
-                        data[i].thumbnail_path = '{{ request.static_url("stalker_pyramid:static/stalker/images/T_NO_IMAGE.gif") }}';
+                    if (data[i].thumbnail_full_path == null) {
+                        data[i].thumbnail_full_path = '{{ request.static_url("stalker_pyramid:static/stalker/images/T_NO_IMAGE.gif") }}';
                     }
                     else {
-                        data[i].thumbnail_path = '/' + data[i].thumbnail_path;
+                        data[i].thumbnail_full_path = '/' + data[i].thumbnail_full_path;
                     }
 
 
