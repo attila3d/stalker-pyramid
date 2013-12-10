@@ -1782,6 +1782,21 @@ def auto_schedule_tasks(request):
 
 
 @view_config(
+    route_name='request_review_dialog',
+    renderer='templates/task/dialog/request_review_dialog.jinja2'
+)
+def request_review_dialog(request):
+    task_id = request.matchdict.get('id')
+    came_from = request.params.get('came_from', '/')
+
+
+    return {
+        'came_from': came_from,
+        'task_id': task_id
+    }
+
+
+@view_config(
     route_name='request_review',
 )
 def request_review(request):
@@ -1789,6 +1804,7 @@ def request_review(request):
     """
     # get logged in user as he review requester
     logged_in_user = get_logged_in_user(request)
+
 
     task_id = request.matchdict.get('id', -1)
     logger.debug('task_id : %s' % task_id)
@@ -1938,6 +1954,10 @@ def request_review(request):
             body=description_text,
             html=description_html)
         mailer.send(message)
+
+
+    request.session.flash(
+                'success:Your review request has been sent to %s' % responsible.name)
 
     return Response('Your review request has been sent to %s' %
                     responsible.name)
