@@ -184,8 +184,7 @@
 {% raw %}
 <script id="tmpl_notificationRow" type="text/x-dot-template">
     <li>
-
-        <a href="/tickets/{{=it.id }}/view">
+        <a href="/tickets/{{= it.id }}/view">
             <img src="/{{=it.created_by_thumbnail}}"
                  class="msg-photo"/>
             <span class="msg-body">
@@ -206,43 +205,32 @@
 
 <script type="text/javascript">
 
-    $(document).ready(function () {
-
-        $.getJSON('/users/{{ logged_in_user.id }}/open_tickets/').then(function (data) {
-
+    $.getJSON('/users/{{ logged_in_user.id }}/open_tickets/').then(function (data) {
+        $(document).ready(function () {
             var notifications = $('#notifications');
             var total_tickets = data.length;
 
             if (total_tickets < 0) {
-
                 notifications.append('<a data-toggle="dropdown" class="dropdown-toggle" href="#"><i class="icon-bell-alt icon-bell light-grey"></i><span class="badge badge-important">0</span></a>');
                 return;
-
             }
-
 
             notifications.append('<a data-toggle="dropdown" class="dropdown-toggle" href="#"><i class="icon-bell-alt icon-animated-bell"></i><span class="badge badge-important">' + total_tickets + '</span></a>');
             notifications.append('<ul class="pull-right dropdown-navbar dropdown-menu dropdown-caret dropdown-closer"></ul>');
 
-
             var row_template = doT.template($('#tmpl_notificationRow').html());
 
-
             $(function () {
-
                 var notifications_list = $('#notifications>ul');
-
                 notifications_list.append('<li class="nav-header"><i class="icon-warning-sign"></i>' + total_tickets + '  Tickets</li>');
 
                 var i = 0;
-
-                for (i = 0; i < 5; i++) {
+                var limit = Math.min(5, data[i].length);
+                for (i = 0; i < limit; i++) {
                     notifications_list.append(row_template(data[i]));
                 }
 
                 notifications_list.append('<li><a href="{{ request.route_path('list_entity_tickets', id=logged_in_user.id) }}">See all tickets<i class="icon-arrow-right"></i></a></li>');
-
-
             });
 
         });
