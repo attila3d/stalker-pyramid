@@ -1,0 +1,203 @@
+/* Copyright (C) 2009-2014 Erkan Ozgur Yilmaz
+ 
+ This file is part of Stalker Pyramid.
+ 
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation;
+ version 2.1 of the License.
+ 
+ This library is distributed in the hope that it will be useful,
+            but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+ 
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+*/
+.form-horizontal .control-group {
+  margin-bottom: 5px;
+}
+.ticket_Fixed,
+.ticket_Closed {
+  text-decoration: line-through;
+}
+tr .even > td .ticket_CRITICAL {
+  background: none repeat scroll 0 0 #ffddcc;
+  border-color: #ee8888;
+  color: #aa2222;
+}
+tr .even > td .ticket_BLOCKER {
+  background: none repeat scroll 0 0 #ffddcc;
+  border-color: #ee8888;
+  color: #aa2222;
+}
+tr .odd > td .ticket_CRITICAL {
+  background: none repeat scroll 0 0 #ffeedd;
+  border-color: #ee9999;
+  color: #aa2222;
+}
+tr .odd > td .ticket_BLOCKER {
+  background: none repeat scroll 0 0 #ffeedd;
+  border-color: #ee9999;
+  color: #aa2222;
+}
+.header-color-project {
+  background: #2e8965;
+  border-color: #2e8965;
+}
+.header-color-project + .widget-body {
+  border-color: #2e8965;
+}
+.header-color-asset {
+  background: #848484;
+  border-color: #d3d7dc;
+}
+.header-color-asset + .widget-body {
+  border-color: #d3d7dc;
+}
+.header-color-sequence {
+  background: #82af6f;
+  border-color: #82af6f;
+}
+.header-color-sequence + .widget-body {
+  border-color: #82af6f;
+}
+.header-color-shot {
+  background: #5090c1;
+  border-color: #5090c1;
+}
+.header-color-shot + .widget-body {
+  border-color: #5090c1;
+}
+.header-color-task {
+  background: #848484;
+  border-color: #a9c1c1;
+}
+.header-color-task + .widget-body {
+  border-color: #bdc1c6;
+}
+.header-color-group {
+  background: #e2755f;
+  border-color: #e2755f;
+}
+.header-color-group + .widget-body {
+  border-color: #e2755f;
+}
+.header-color-department {
+  background: #6379aa;
+  border-color: #6379aa;
+}
+.header-color-department + .widget-body {
+  border-color: #6379aa;
+}
+.header-color-user {
+  background: #ffc657;
+  border-color: #ffc657;
+}
+.header-color-user + .widget-body {
+  border-color: #ffc657;
+}
+.pln {
+  background-color: #abbac3;
+  color: white;
+}
+.pln a {
+  color: white;
+}
+.new {
+  background-color: #abbac3;
+  color: white;
+}
+.new a {
+  color: white;
+}
+.rts {
+  background-color: #d15b47;
+  color: white;
+}
+.rts a {
+  color: white;
+}
+.wip {
+  background-color: #ffc657;
+  color: white;
+}
+.wip a {
+  color: white;
+}
+.prev {
+  background-color: #6fb3e0;
+  color: white;
+}
+.prev a {
+  color: white;
+}
+.hrev {
+  background-color: #7e6eb0;
+  color: white;
+}
+.hrev a {
+  color: white;
+}
+.cmpl {
+  background-color: #82af6f;
+  color: white;
+}
+.cmpl a {
+  color: white;
+}
+.black2 {
+  background-color: #1f1f1f;
+  color: white;
+}
+.black2 a {
+  color: white;
+}
+.dgrid-selected .pln {
+  background-color: #cddce5;
+}
+.dgrid-selected .new {
+  background-color: #cddce5;
+}
+.dgrid-selected .rts {
+  background-color: #f37d69;
+}
+.dgrid-selected .wip {
+  background-color: #ffe879;
+}
+.dgrid-selected .prev {
+  background-color: #91d5ff;
+}
+.dgrid-selected .hrev {
+  background-color: #915ee6;
+}
+.dgrid-selected .cmpl {
+  background-color: #a4d191;
+}
+.label-red {
+  background-color: #d53f40 !important;
+}
+.label-orange {
+  background-color: #ffc657 !important;
+}
+.label-blue {
+  background-color: #6fb3e0 !important;
+}
+.label-purple {
+  background-color: #6f3cc4 !important;
+}
+.label-green {
+  background-color: #82af6f !important;
+}
+.fc-week {
+  background-color: #e6eaef;
+}
+.fc-day-number {
+  text-align: right;
+  background-color: #c4c8cd;
+  width: 100%;
+  padding-left: 0px !important;
+  padding-right: 2px !important;
+}
