@@ -44,8 +44,8 @@ from stalker_pyramid.views import (PermissionChecker, get_logged_in_user,
                                    multi_permission_checker,
                                    dummy_email_address, local_to_utc,
                                    get_user_os)
-from stalker_pyramid.views.link import replace_img_data_with_links, \
-    convert_file_link_to_full_path
+from stalker_pyramid.views.link import (replace_img_data_with_links,
+                                        convert_file_link_to_full_path)
 from stalker_pyramid.views.type import query_type
 
 
@@ -177,152 +177,6 @@ def get_description_html(description_temp, user_name, task_hierarchical_name, no
         "spacing": '<br><br>'
     }
     return description_html
-
-
-# @view_config(
-#     route_name='fix_task_statuses'
-# )
-# def fix_task_statuses(request):
-#     """the view correspondence of the update_task_statuses function
-#     """
-#     task_id = request.matchdict.get('id')
-#     task = Task.query.filter(Task.id == task_id).first()
-#     # check for children
-#     #update_task_statuses(task)
-#     # check fo dependencies
-#     #update_task_statuses_with_dependencies(task)
-#     return HTTPOk()
-
-
-# def update_task_statuses(task):
-#     """updates the task status according to its children statuses
-#     """
-#     if not task:
-#         # None is given
-#         return
-# 
-#     if not task.is_container:
-#         # do nothing
-#         return
-# 
-#     # first look to children statuses and if all of them are CMPL or HREV
-#     # then set this tasks status to CMPL
-#     # and update parents status
-# 
-#     status_new = Status.query.filter(Status.code == 'NEW').first()
-#     status_rts = Status.query.filter(Status.code == 'RTS').first()
-#     status_wip = Status.query.filter(Status.code == 'WIP').first()
-#     status_cmpl = Status.query.filter(Status.code == 'CMPL').first()
-# 
-#     # use pure sql
-#     sql_query = """select
-#         "Statuses".code,
-#         count(1)
-#     from "Tasks"
-#     join "Statuses" on "Tasks".status_id = "Statuses".id
-#     where "Tasks".parent_id = %s
-#     group by "Statuses".code
-#     """ % task.id
-# 
-#     result = DBSession.connection().execute(sql_query)
-# 
-#     status_codes = {
-#         'NEW': 0,
-#         'RTS': 0,
-#         'WIP': 0,
-#         'PREV': 0,
-#         'HREV': 0,
-#         'CMPL': 0
-#     }
-# 
-#     # update statuses
-#     for r in result.fetchall():
-#         if r[1]:
-#             status_codes[r[0]] = 1
-# 
-#     # convert it to a binary number (represented as string)
-#     binary_status = \
-#         '%(NEW)s%(RTS)s%(WIP)s%(PREV)s%(HREV)s%(CMPL)s' % status_codes
-# 
-#     status_lut = {
-#         '000000': status_new,  # this will not happen
-#         '000001': status_cmpl,
-# 
-#         '000010': status_wip,  # with the new implementation this could happen
-#         '000011': status_wip,
-# 
-#         '000100': status_wip,
-#         '000101': status_wip,
-#         '000110': status_wip,
-#         '000111': status_wip,
-# 
-#         '001000': status_wip,
-#         '001001': status_wip,
-#         '001010': status_wip,
-#         '001011': status_wip,
-#         '001100': status_wip,
-#         '001101': status_wip,
-#         '001110': status_wip,
-#         '001111': status_wip,
-# 
-#         # RTS extension
-#         '010000': status_rts,
-#         '010001': status_wip,
-#         '010010': status_wip,
-#         '010011': status_wip,
-#         '010100': status_wip,
-#         '010101': status_wip,
-#         '010110': status_wip,
-#         '010111': status_wip,
-#         '011000': status_wip,
-#         '011001': status_wip,
-#         '011010': status_wip,
-#         '011011': status_wip,
-#         '011100': status_wip,
-#         '011101': status_wip,
-#         '011110': status_wip,
-#         '011111': status_wip,
-# 
-#         '100000': status_new,
-#         '100001': status_wip,
-#         '100010': status_wip,
-#         '100011': status_wip,
-#         '100100': status_wip,
-#         '100101': status_wip,
-#         '100110': status_wip,
-#         '100111': status_wip,
-#         '101000': status_wip,
-#         '101001': status_wip,
-#         '101010': status_wip,
-#         '101011': status_wip,
-#         '101100': status_wip,
-#         '101101': status_wip,
-#         '101110': status_wip,
-#         '101111': status_wip,
-#         '110000': status_rts,
-#         '110001': status_wip,
-#         '110010': status_wip,
-#         '110011': status_wip,
-#         '110100': status_wip,
-#         '110101': status_wip,
-#         '110110': status_wip,
-#         '110111': status_wip,
-#         '111000': status_wip,
-#         '111001': status_wip,
-#         '111010': status_wip,
-#         '111011': status_wip,
-#         '111100': status_wip,
-#         '111101': status_wip,
-#         '111110': status_wip,
-#         '111111': status_wip
-#     }
-# 
-#     task.status = status_lut[binary_status]
-#     # go to parents
-#     #update_task_statuses(task.parent)
-#     # commit the changes
-#     #DBSession.commit()
-#     # leave the commits to transaction.manager
 
 
 def update_task_statuses_with_dependencies(task):
@@ -565,17 +419,7 @@ def duplicate_task_hierarchy(request):
         DBSession.add(dup_task)
 
         #update_task_statuses_with_dependencies(dup_task)
-        leafs = find_leafs_in_hierarchy(dup_task)
-        #for leaf in leafs:
-        #    update_task_statuses_with_dependencies(leaf)
-
-        #for leaf in leafs:
-        #    update_task_statuses(leaf)
-
-            # check for children
-        #update_task_statuses(dup_task)
-        # check fo dependencies
-        #update_task_statuses_with_dependencies(dup_task)
+        #leafs = find_leafs_in_hierarchy(dup_task)
     else:
         transaction.abort()
         return Response(
@@ -891,11 +735,12 @@ def update_task(request):
     task.type = query_type(entity_type, type_name)
 
     if entity_type == 'Shot':
-        task.sequences = [
-            Sequence.query.filter_by(id=shot_sequence_id).first()]
-        # TODO: there is a bug in Stalker we can not set shot.cut_in because of _cut_duration attribute is absent
-        # task.cut_in = cut_in
-        # task.cut_out = cut_out
+        shot = task
+        shot.sequences = [
+            Sequence.query.filter_by(id=shot_sequence_id).first()
+        ]
+        shot.cut_in = cut_in
+        shot.cut_out = cut_out
 
     task._reschedule(task.schedule_timing, task.schedule_unit)
     if update_bid:
@@ -1313,12 +1158,10 @@ def get_user_tasks(request):
     """returns all the tasks in the database related to the given entity in
     flat json format
     """
-
     logger.debug('get_user_tasks starts')
     logged_in_user = get_logged_in_user(request)
     # get all the tasks related in the given project
     user_id = request.matchdict.get('id', -1)
-
 
     sql_query = """select
         "Tasks".id  as task_id,
@@ -1978,7 +1821,6 @@ def data_dialog(request, mode='create', entity_type='Task'):
 
     logger.debug('entity_id  : %s' % entity_id)
     logger.debug('entity     : %s' % entity)
-
     logger.debug('project    : %s' % project)
     logger.debug('parent     : %s' % parent)
     logger.debug('depends_to : %s' % depends_to)
@@ -2231,12 +2073,11 @@ def create_task(request):
     status_cmpl = Status.query.filter_by(code='CMPL').first()
     status = status_rts
 
-    if depends:
-        for dependent_task in depends:
-
-            if dependent_task.status != status_cmpl:
-                # TODO: use update_task_statuses_with_dependencies()
-                status = status_wfd
+    #if depends:
+    #    for dependent_task in depends:
+    #        if dependent_task.status != status_cmpl:
+    #            # TODO: use update_task_statuses_with_dependencies()
+    #            status = status_wfd
 
     logger.debug('status: %s' % status)
 
@@ -2250,7 +2091,7 @@ def create_task(request):
     kwargs['date_created'] = local_to_utc(datetime.datetime.now())
 
     kwargs['status_list'] = status_list
-    kwargs['status'] = status
+    #kwargs['status'] = status
 
     kwargs['schedule_model'] = schedule_model
     kwargs['schedule_timing'] = schedule_timing
@@ -2450,7 +2291,6 @@ def get_last_version_of_task(request, is_published=''):
 def review_task_dialog(request):
     """called when reviewing tasks
     """
-
     entity_id = request.matchdict.get('id')
     entity = Entity.query.filter_by(id=entity_id).first()
 
@@ -2890,7 +2730,6 @@ def request_progress_review(request):
     recipients = []
 
     # Create tickets for selected responsible
-
     user_link_internal = get_user_link_internal(request, logged_in_user)
     task_hierarchical_name = get_task_hierarchical_name(task.id)
     task_link_internal = get_task_link_internal(request, task, task_hierarchical_name)
