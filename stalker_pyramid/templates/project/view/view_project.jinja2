@@ -1,0 +1,56 @@
+{% extends "base.jinja2" %}
+
+{# PRE-HEADER#}
+{% block pre_header %}
+
+    {% include 'charts/chart_preheader.jinja2' %}
+
+{% endblock pre_header %}
+
+{# BREADCRUMBS #}
+{% block breadcrumbs %}
+
+    {% set page_title='Dashboard' %}
+    {% include 'breadcrumb/breadcrumbs.jinja2' %}
+
+{% endblock breadcrumbs %}
+
+{# SIDEBAR #}
+{% block sidebar %}
+
+    {% include 'sidebar.jinja2' %}
+
+{% endblock sidebar %}
+
+{# PAGE-CONTENT #}
+{% block page_content %}
+
+    {% set page_title='Dashboard' %}
+    {% include 'page_header.jinja2' %}
+
+    <div class="row-fluid">
+        <div class="span10">
+            <div id="infobox"
+                 address='/entities/{{ entity.id }}/tasks_stats/'
+                 class="infobox-container pull-left">
+                {% include 'components/infobox.jinja2' %}
+            </div>
+        </div>
+
+        <div class="span2">
+            <h5 class="green"><i class="icon-bolt"></i> Progress</h5>
+
+            <div class="progress progress-success progress-striped"
+                 data-percent="{{ "%2.1f" | format(entity.percent_complete) }}%">
+                <div class="bar"
+                     style="width: {{ entity.percent_complete }}%;"></div>
+            </div>
+
+        </div>
+    </div>
+    <div class="hr hr8 hr-double"></div>
+    <div class="space"></div>
+
+
+{% endblock page_content %}
+
