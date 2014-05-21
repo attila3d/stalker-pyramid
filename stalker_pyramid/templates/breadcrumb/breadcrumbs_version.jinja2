@@ -1,0 +1,37 @@
+<ul id="breadcrumb_version" class="breadcrumb">
+
+    <li>
+        <a href="{{ request.route_url('view_project', id=task.project.id) }}">{{ task.project.name }}</a>
+        <span class="divider">
+            <i class="icon-angle-right arrow-icon"></i>
+        </span>
+    </li>
+
+    {% for parent in task.parents %}
+        <li>
+            <a href="{{ request.route_url('view_task', id=parent.id) }}">{{ parent.name }}</a>
+            <span class="divider">
+                <i class="icon-angle-right arrow-icon"></i>
+            </span>
+        </li>
+    {% endfor %}
+    <li>
+        <a href="{{ request.route_url('view_task', id=task.id) }}">{{ task.name }}</a>
+        <span class="divider">
+            <i class="icon-angle-right arrow-icon"></i>
+        </span>
+    </li>
+
+    <li>
+        <a href="{{ request.route_url('list_task_versions', id=entity.task.id) }}">Versions</a>
+        <span class="divider">
+            <i class="icon-angle-right arrow-icon"></i>
+        </span>
+    </li>
+
+    <li class="active">{{ version.filename }}</li>
+
+</ul>
+<!--.breadcrumb-->
+
+
