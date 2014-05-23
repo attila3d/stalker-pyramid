@@ -324,30 +324,41 @@
         var time_str = '';
         var u_seconds = unit_by_seconds(unit);
 
-        if (time !=0) {
-            if (time > u_seconds) {
-                var time_unit = parseInt(time / u_seconds);
 
-                calc_time = calc_time % u_seconds;
+        if(unit){
 
-                time_str += time_unit + ' ' + unit;
+            if(time !=0){
 
-                if (time>0){
-                    if (index < units.length) {
-                        time_str += ' ' + meaningful_time_calculator(calc_time, units[index + 1]);
+                if (time > u_seconds){
+
+                    var time_unit = parseInt(time/u_seconds)
+
+                    calc_time = calc_time%u_seconds
+
+                    time_str +=time_unit+' '+unit
+
+                    if(time>0){
+
+                        if (index < units.length-1){
+
+                            time_str +=' '+meaningful_time_calculator(calc_time,units[index+1])
+
+                        }
+                    }
+
+                }
+                else{
+                    if (index < units.length-1){
+                       time_str +=' '+meaningful_time_calculator(calc_time,units[index+1])
                     }
                 }
-
-            } else {
-                if (index < units.length) {
-                   time_str += ' ' + meaningful_time_calculator(calc_time, units[index+1]);
-                }
             }
-        } else {
-            time_str = ' ';
         }
-        return time_str;
+
+        return time_str
+
     }
+
 </script>
 
 <script>
@@ -403,6 +414,7 @@
         $.getJSON('/entities/' + id + '/' + treeItemType.toLowerCase() + 's/').then(function (data) {
 
             $(document).ready(function () {
+
                 var sidebar_list = $('#sidebar_list');
                 var tree_link_template = doT.template($('#tmpl_sidebar_tree_link').html());
                 var data_counts = data.length;
