@@ -1,0 +1,103 @@
+<div class="widget-box">
+    <div class="widget-header widget-header-flat widget-header-small">
+          <h5>
+                <i class="icon-time"></i>
+                Timing
+          </h5>
+    </div>
+
+    <div class="widget-body no-padding">
+        <div class="widget-main no-padding">
+            <div id='bid_alert' class="alert alert-block no-padding" >
+
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td style="text-align: right"><strong>Bid</strong></td>
+                            <td><span id="bid"></span></td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: right"><strong>Schedule Timing</strong></td>
+                            <td><span id="schedule_timing"></span></td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: right"><strong>Total Time Logs</strong></td>
+                            <td><span id="total_logged"></span></td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: right"><strong>Time to Complete</strong></td>
+                            <td><span id="time_to_complete"></span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="progress no-padding" style="margin-top: 0px; margin-bottom: 0px">
+                    <div id='bid_bar' class="bar bar-info" style="width: 0%;"><div></div></div>
+                    <div id='total_logged_bar' class="bar" style="width: 0%;"></div>
+                    <div id='schedule_timing_bar' class="bar bar-danger" style="width: 0%;"></div>
+            </div>
+        </div><!--/widget-main-->
+        {% if (entity.schedule_seconds - entity.total_logged_seconds)==0  and entity.status.code=='WIP'%}
+        <div class="widget-toolbox clearfix">
+            <button id='task_review_button'
+                    class="btn btn-small btn-danger span12"
+                    data-placement="bottom"
+                    title="Request Extra Time"
+                    data-target="#dialog_template"
+                    data-toggle="modal"
+                    data-keyboard="false"
+                    href="/tasks/{{entity.id}}/request_extra_time/dialog?came_from={{request.current_route_path() }}"
+                    >
+                <i class="icon-time bigger-130"></i> Request Extra Time</button>
+        </div>
+        {% endif %}
+    </div><!--/widget-body-->
+</div><!--/widget-box-->
+
+<script class="code" type="text/javascript">
+    $(document).ready(function () {
+        var schedule_unit_seconds = unit_by_seconds('{{ entity.schedule_unit }}');
+
+        var bid_seconds = calculate_seconds({{ entity.bid_timing }}, '{{ entity.bid_unit }}');
+        var schedule_timing_seconds = calculate_seconds({{ entity.schedule_timing }}, '{{ entity.schedule_unit }}');
+        var total_logged_seconds = {{ entity.total_logged_seconds}};
+
+{#        console.log('entity.bid_unit: {{ entity.bid_unit }} total_logged_seconds: '+total_logged_seconds+' schedule_timing_seconds: '+schedule_timing_seconds+' bid_seconds:'+bid_seconds);#}
+
+        var bid = meaningful_time_calculator(bid_seconds, '{{ entity.bid_unit }}');
+        var schedule_timing = meaningful_time_calculator(schedule_timing_seconds, '{{ entity.bid_unit }}');
+        var total_logged = meaningful_time_calculator(total_logged_seconds, '{{ entity.bid_unit }}');
+        var time_to_complete = meaningful_time_calculator(schedule_timing_seconds-total_logged_seconds, '{{ entity.bid_unit }}');
+
+        $('#bid').text(bid);
+        $('#schedule_timing').text(schedule_timing);
+        $('#total_logged').text(total_logged);
+        $('#time_to_complete').text(time_to_complete);
+
+        var bid_bar_percent = 0;
+        var total_logged_bar_percent = (total_logged_seconds/schedule_timing_seconds)*100;
+        var schedule_timing_bar_percent = 100-total_logged_bar_percent;
+        if(bid_seconds < total_logged_seconds)
+        {
+            $('#bid_alert').addClass('alert-danger');
+            $('#total_logged_bar').addClass('bar-warning');
+
+            bid_bar_percent = (bid_seconds/schedule_timing_seconds)*100;
+            total_logged_bar_percent -= bid_bar_percent;
+            schedule_timing_bar_percent = 100-(bid_bar_percent+total_logged_bar_percent);
+
+        }
+        else if(bid_seconds == total_logged_seconds) {
+             $('#bid_alert').addClass('alert-info');
+             $('#total_logged_bar').addClass('bar-success');
+        }
+        else{
+             $('#bid_alert').addClass('alert-info');
+             $('#total_logged_bar').addClass('bar-warning');
+        }
+
+        $('#bid_bar').attr('style','width: '+bid_bar_percent+'%;');
+        $('#total_logged_bar').attr('style','width: '+total_logged_bar_percent+'%;');
+        $('#schedule_timing_bar').attr('style','width: '+schedule_timing_bar_percent+'%;');
+    });
+</script>
