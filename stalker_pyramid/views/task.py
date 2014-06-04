@@ -2931,6 +2931,8 @@ def cleanup_task_new_reviews(request):
 
     note_type = query_type('Note', 'Cleanup Reviews')
     note_type.html_class = 'red'
+    note_type.code = 'cleanedup_reviews'
+
     note = Note(
         content='%s has cleaned all unanswered reviews' % logged_in_user.name,
         created_by=logged_in_user,
@@ -3096,6 +3098,8 @@ def approve_task(request):
 
     note_type = query_type('Note', 'Approved')
     note_type.html_class = 'green'
+    note_type.code = 'approved'
+
     note = Note(
         content=description,
         created_by=logged_in_user,
@@ -3270,6 +3274,7 @@ def request_revision(request):
 
     note_type = query_type('Note', 'Request Revision')
     note_type.html_class = 'purple'
+    note_type.code = 'requested_revision'
 
     note = Note(
         content='Expanded the timing of the task by <b>'
@@ -3537,6 +3542,7 @@ def request_progress_review(request):
 
         note_type = query_type('Note', 'Ticket Comment')
         note_type.html_class = 'pink'
+        note_type.code = 'ticket_comment'
 
         ticket_comment = Note(
             content=note,
@@ -3621,6 +3627,7 @@ def request_final_review(request):
 
     note_type = query_type('Note', 'Request Review')
     note_type.html_class = 'orange'
+    note_type.code = 'requested_review'
 
     note = Note(
         content=note_str,
@@ -3826,6 +3833,7 @@ def request_extra_time(request):
 
     note_type = query_type('Note', 'Request Extra Time')
     note_type.html_class = 'red2'
+    note_type.code = 'requested_extra_time'
 
     note = Note(
         content='<i class="icon-heart"></i> Requesting extra time <b>'
@@ -4272,7 +4280,9 @@ def force_task_status(request):
     utc_now = local_to_utc(datetime.datetime.now())
 
     note_type = query_type('Note', 'Forced Status')
-    note_type.html_class = 'green2'
+    note_type.html_class = 'red'
+    note_type.code = 'forced_status'
+
     note = Note(
         content='%s has changed this task status to %s' % (logged_in_user.name, status.name),
         created_by=logged_in_user,
