@@ -177,7 +177,6 @@ def get_entity_versions(request):
         elif user_os == 'osx':
             path_converter = repo.to_osx_path
 
-
     return [{
         'id': version.id,
         'task': {'id': version.task.id,
@@ -197,7 +196,7 @@ def get_entity_versions(request):
         'version_number': version.version_number,
         'date_created': milliseconds_since_epoch(version.date_updated),
         'created_with': version.created_with,
-        'description':version.description
+        'description': version.description
     } for version in entity.versions]
 
 
