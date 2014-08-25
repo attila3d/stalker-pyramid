@@ -1,0 +1,146 @@
+{# Stalker Pyramid a Web Base Production Asset Management System
+ Copyright (C) 2009-2014 Erkan Ozgur Yilmaz
+
+ This file is part of Stalker Pyramid.
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation;
+ version 2.1 of the License.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+#}
+{% extends "base.jinja2" %}
+
+{# PRE-HEADER#}
+{% block pre_header %}
+
+    <link rel="stylesheet"
+          href='{{ request.static_url("stalker_pyramid:static/ace/css/fullcalendar.css") }}'/>
+    <link rel="stylesheet"
+          href='{{ request.static_url("stalker_pyramid:static/ace/css/bootstrap-timepicker.css") }}'/>
+    <link rel="stylesheet"
+          href='{{ request.static_url("stalker_pyramid:static/ace/css/datepicker.css") }}'/>
+    <link rel="stylesheet"
+          href='{{ request.static_url("stalker_pyramid:static/ace/css/daterangepicker.css") }}'/>
+
+
+
+{% endblock pre_header %}
+
+{#SIDEBAR#}
+{% block sidebar %}
+
+    {% include 'sidebar.jinja2' %}
+
+{% endblock sidebar %}
+
+
+{# BREADCRUMBS #}
+{% block breadcrumbs %}
+
+    {% set page_title='Versions' %}
+    
+   {% include 'breadcrumb/breadcrumbs.jinja2' %}
+
+{% endblock breadcrumbs %}
+
+{#PAGE-CONTENT#}
+{% block page_content %}
+
+{#    {% set page_title='Versions' %}#}
+{#    {% include 'page_header.jinja2' %}#}
+    <!--/.page-header-->
+    {% set add_button_title='Create' %}
+    {% set add_button_address=request.route_url('create_version_dialog', tid=entity.id, _query={'came_from': request.current_route_path()}) %}
+
+    {% set list_item_type='Version' %}
+    {% include 'components/data_table.jinja2' %}
+    <!--PAGE CONTENT ENDS-->
+
+{% endblock page_content %}
+
+<!--page specific plugin scripts-->
+{#EXTRA-SCRIPTS#}
+{% block extrascripts %}
+
+    {# ***************************************************************************************#}
+    {# Table Template#}
+
+    {% raw %}
+    <script id="tmpl_itemThead" type="text/x-dot-template">
+
+            <tr>
+                <th>Updated Date</th>
+                <th>Take | #</th>
+                <th>Is Published</th>
+                <th>Created By</th>
+                <th>Created With</th>
+                <th>Description</th>
+                <!--<th>Parent Version</th>-->
+                <th>Path</th>
+            </tr>
+    </script>
+    {% endraw %}
+
+
+
+     {# ***************************************************************************************#}
+    {# Task Row Template#}
+
+    {% raw %}
+    <script id="tmpl_itemRow" type="text/x-dot-template">
+
+        <tr {{=it.is_published? 'class="green"' : '' }}>
+            <td style="width:70px;">{{= it.date_created}} </td>
+            <td><a href="/versions/{{= it.id }}/view" {{=it.is_published? 'class="green"' : '' }}>
+                    {{= it.take_name }} | {{= it.version_number }}
+                </a>
+            </td>
+            <td>{{= it.is_published }}</td>
+            <td>
+                <a href="/users/{{= it.created_by.id }}/view">
+                    {{= it.created_by.name}}
+                </a>
+            </td>
+            <td>
+                {{= it.created_with}}
+            </td>
+            <td>
+                {{= it.description}}
+            </td>
+            <!--<td>{{? it.parent }}-->
+                    <!--<a href='/versions/{{= it.parent.id }}/view'>-->
+                        <!--{{= it.parent.take_name }} | {{= it.parent.version_number }}-->
+                    <!--</a>-->
+                <!--{{?}}-->
+            <!--</td>-->
+            <td>
+                <a class="green"
+                   href='javascript:copyToClipboard("{{= it.absolute_full_path }}")'>
+                    <i class="icon-copy bigger-130"></i>
+                </a>
+            </td>
+        </tr>
+    </script>
+    {% endraw %}
+
+
+    <script>
+
+        var tableParameters = {"aoColumns": [null,  null, null, null, null,null,null]}
+        var sortingParameters = [[0, 'desc']]
+        var tableDataAddress = '{{ request.route_path('get_entity_versions', id=entity.id) }}'
+
+    </script>
+
+
+{% endblock extrascripts %}
+
