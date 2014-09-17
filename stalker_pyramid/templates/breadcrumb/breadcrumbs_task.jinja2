@@ -1,0 +1,28 @@
+<ul id="breadcrumb_task" class="breadcrumb">
+
+    <li>
+        <a href="{{ request.route_url('view_project', id=task.project.id) }}">{{ task.project.name }}</a>
+        <span class="divider">
+          <i class="icon-angle-right arrow-icon"></i>
+        </span>
+    </li>
+
+    {% for parent in task.parents %}
+        <li>
+            <a href="{{ request.route_url('view_task', id=parent.id) }}">{{ parent.name }}</a>
+            <span class="divider">
+                <i class="icon-angle-right arrow-icon"></i>
+            </span>
+        </li>
+    {% endfor %}
+    <li class="dropdown-submenu">
+        <a tabindex="-1" href="{{ request.route_url('view_task', id=task.id) }}">{{ task.name }}&nbsp;&nbsp;</a>
+
+        <ul class="dropdown-menu">
+            {% for sibling_task in task.parent.children  %}
+                <li><a href="{{ request.route_url('view_task', id=sibling_task.id) }}">{{ sibling_task.name }}</a></li>
+           {% endfor %}
+        </ul>
+    </li>
+</ul>
+<!--.breadcrumb-->
