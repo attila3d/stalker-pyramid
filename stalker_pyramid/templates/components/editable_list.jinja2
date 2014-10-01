@@ -1,0 +1,135 @@
+<div class="widget-box">
+    <div class="widget-header widget-header-small header-color-{{ list_item_type.lower() }}">
+
+        <h4 id="{{ list_item_type.lower() }}_items_header" class="smaller">
+
+        </h4>
+        {% if has_permission('Update_'+entity.entity_type) %}
+            <div class="widget-toolbar action-buttons">
+                <a data-target="#dialog_template"
+                   data-toggle="modal"
+                   data-keyboard=false
+                   {% if add_button_address %}
+                   href="{{ add_button_address }}"
+                   {% else %}
+                   href ="{{ request.route_url('append_entities_to_entity_dialog', id=entity.id, entities=list_item_type, _query={'came_from': request.current_route_path()}) }}"
+                   {% endif %}
+                   class="white">
+                    <i class="icon-plus"></i>
+                </a>
+            </div>
+        {% endif %}
+    </div>
+    <div class="widget-body">
+        <div id="{{ list_item_type.lower() }}_editable_list" class="widget-main"></div>
+    </div>
+</div>
+
+{% raw %}
+<script id="tmpl_list_item" type="text/x-dot-template">
+    <div class="profile-activity clearfix">
+        <div>
+            <img class="pull-left"
+                 src='{{=it.thumbnail_full_path }}'>
+            <a class="user"
+               href={{=it.item_view_link}}>{{=it.name }}</a>
+
+            <div class="time">
+                <i class="icon-user bigger-110"></i>
+                {{=it.description }}
+            </div>
+        </div>
+        <div id="editable_list_item_actions_{{=it.id}}"
+             class="tools action-buttons">
+
+        </div>
+    </div>
+
+</script>
+{% endraw %}
+
+
+{% raw %}
+<script id="tmpl_item_update" type="text/x-dot-template">
+    <a data-target="#dialog_template"
+       data-toggle="modal"
+       data-keyboard=false
+       href='{{=it.item_update_link }}' class="blue">
+        <i class="icon-pencil bigger-125"></i>
+    </a>
+</script>
+{% endraw %}
+
+{% raw %}
+<script id="tmpl_item_remove" type="text/x-dot-template">
+    <a data-target="#dialog_template"
+       data-toggle="modal"
+       data-keyboard=false
+       href='{{=it.item_remove_link }}' class="red">
+       <i class="icon-remove bigger-125"></i>
+    </a>
+</script>
+{% endraw %}
+
+
+<script>
+    $(function () {
+
+        function style_edit_form(form) {
+            //enable datepicker on "sdate" field and switches for "stock" field
+            form.find('input[name=sdate]').datepicker({format:'yyyy-mm-dd' , autoclose:true})
+                .end().find('input[name=stock]')
+                      .addClass('ace ace-switch ace-switch-5').wrap('<label class="inline" />').after('<span class="lbl"></span>');
+
+            //update buttons classes
+            var buttons = form.next().find('.EditButton .fm-button');
+            buttons.addClass('btn btn-small').find('[class*="-icon"]').remove();//ui-icon, s-icon
+            buttons.eq(0).addClass('btn-primary').prepend('<i class="icon-ok"></i>');
+            buttons.eq(1).prepend('<i class="icon-remove"></i>')
+
+            buttons = form.next().find('.navButton a');
+            buttons.find('.ui-icon').remove();
+            buttons.eq(0).append('<i class="icon-chevron-left"></i>');
+            buttons.eq(1).append('<i class="icon-chevron-right"></i>');
+        }
+
+        var icon_name = get_icon('{{ list_item_type.lower() }}');
+        $('#'+'{{ list_item_type.lower() }}'+'_items_header').append('<i class=' + icon_name + '></i>{{ list_item_type }}s');
+
+
+        // fill items table with dynamic data
+        $.getJSON('{{ address }}').then(function (data) {
+
+            var row_template = doT.template($('#tmpl_list_item').html());
+
+            // wait until document is ready
+            $(function () {
+                var editable_list = $('#'+'{{ list_item_type.lower() }}'+'_editable_list');
+                for (var i = 0; i < data.length; i++) {
+
+                    // fix dates
+                    // data[i].date_created = new Date(data[i].date_created).format('yyyy-mm-dd HH:MM');
+
+                    if (data[i].thumbnail_full_path == null) {
+                        data[i].thumbnail_full_path = '{{ request.static_url("stalker_pyramid:static/stalker/images/T_NO_IMAGE.gif") }}';
+                    }
+                    else {
+                        data[i].thumbnail_full_path = '/' + data[i].thumbnail_full_path;
+                    }
+
+                    // append it to the table
+                    editable_list.append(row_template(data[i]));
+                    if (data[i].item_remove_link){
+                        var delete_template = doT.template($('#tmpl_item_remove').html());
+                        $('#editable_list_item_actions_' + data[i].id).append(delete_template(data[i]));
+                    }
+                }
+
+                if (i == 0) {
+                    editable_list.append('<div class="profile-activity clearfix">No {{ list_item_type }} to list</div>');
+                }
+
+            });
+        });
+    });
+</script>
