@@ -1,3 +1,7 @@
+<a class="menu-toggler" id="menu-toggler" href="#">
+    <span class="menu-text"></span>
+</a>
+
 <div class='sidebar sidebar-fixed' id="sidebar">
 
     <script type="text/javascript">
@@ -7,6 +11,9 @@
         } catch (e) {
         }
     </script>
+
+{#    {% set user=logged_in_user %}#}
+{#    {% include 'auth/view/user_sidebar.jinja2' %}#}
 
     {% if entity.entity_type == 'User' %}
         {% set user=entity %}

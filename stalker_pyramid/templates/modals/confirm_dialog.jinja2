@@ -1,6 +1,7 @@
+<script class="dialog_loaded"></script>
 <div id="message" class="alert alert-info bigger-110">
-
 </div>
+
 <script>
     function init_dialog() {
         console.debug('starting to initialize confirm dialog!!!');
@@ -22,11 +23,7 @@
             var submit_button = $(this);
 
 
-            var url;
-            url = '{{ action }}';
-
-            console.debug('url: '+url)
-
+            var url= '{{ action }}';
             if(url==''){
                 $('#dialog_template').modal('hide');
             }

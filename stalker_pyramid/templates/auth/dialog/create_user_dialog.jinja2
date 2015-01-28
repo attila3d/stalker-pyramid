@@ -1,4 +1,5 @@
 {% set user=entity %}
+<script class="dialog_loaded"></script>
 
 <div class="row-fluid padding-2">
 
@@ -14,8 +15,9 @@
     function init_dialog() {
         console.debug('starting to initialize user dialog!!!');
 
-        $('#dialog_template_label').find('span').remove();
-        $('#dialog_template_label').append('<span>New User</span>')
+        var dialog_template_label = $('#dialog_template_label');
+        dialog_template_label.find('span').remove();
+        dialog_template_label.append('<span>New User</span>');
 
         //$('#dialog_template').attr('style', "width:700px; height:800px");
 
@@ -30,21 +32,17 @@
             submit_button.button('loading');
 
             var user_form = $('#user_form');
-
             if (user_form.validate()) {
-
                 $.post(
-                                user_form.attr('action'),
-                                user_form.serialize()
-                        ).done(function () {
-
-                            window.location.assign('{{ came_from }}');
-                        }).fail(function (jqXHR) {
-                            bootbox.alert(jqXHR.responseText);
-                            submit_button.button('reset');
-                        });
-
-
+                    user_form.attr('action'),
+                    user_form.serialize()
+                ).done(function () {
+                    //window.location.assign('{{ came_from }}');
+                    window.location.reload();
+                }).fail(function (jqXHR) {
+                    bootbox.alert(jqXHR.responseText);
+                    submit_button.button('reset');
+                });
             }
         });
 

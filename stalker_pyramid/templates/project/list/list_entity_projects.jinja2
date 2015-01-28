@@ -34,8 +34,8 @@
 
 {# PAGE-CONTENT #}
 {% block page_content %}
-    {% set page_title='Projects' %}
-    {% include 'page_header.jinja2' %}
+{#    {% set page_title='Projects' %}#}
+{#    {% include 'page_header.jinja2' %}#}
 
 
     {% set add_button_address=request.route_path('project_dialog', id=-1, mode='create') %}
@@ -75,7 +75,7 @@
             </td>
             <td><a href='/users/{{=it.created_by_id}}/view'>{{=it.created_by_name}}</a>
             </td>
-            <td>{{=it.users_count}}</td>
+            <td>{{=it.description}}</td>
             <td>
                 <div>
                     <span>{{=it.status}}</span>
@@ -93,13 +93,9 @@
     {% endraw %}
 
     <script>
-
-        var tableParameters = {}
-        var sortingParameters = [[0, 'asc'], [1, 'desc']]
-        var tableDataAddress = '{{ request.route_path('get_entity_projects', id=entity.id) }}'
-
-     console.log('tableDataAddress' + tableDataAddress)
-
-    </script>
+        var tableParameters = {};
+        var sortingParameters = [[0, 'asc'], [1, 'desc']];
+        var tableDataAddress = '{{ request.route_path('get_entity_projects', id=entity.id) }}';
+   </script>
 
 {% endblock extrascripts %}

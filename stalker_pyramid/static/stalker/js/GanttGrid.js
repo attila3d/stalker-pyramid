@@ -22,7 +22,7 @@ define([
     // Creates a new grid with one column set definition to display tasks & resources and a second
     // column set for the actual gantt chart
     "use strict";
-    return declare([OnDemandGrid, ColumnSet, Selection, Keyboard, DijitRegistry, ColumnResizer], {
+    return declare([OnDemandGrid, ColumnSet, Selection, Keyboard, DijitRegistry], {
         keyMap: lang.mixin({}, Keyboard.defaultKeyMap, {
             38: function (event) { // up arrow
                 event.preventDefault();
@@ -243,34 +243,34 @@ define([
             // Column set to display task and resource
             [
                 {
-                    action: {
-                        label: "Action",
-                        sortable: false,
-                        get: function (object) {
-                            return object;
-                        },
-                        renderCell: function (object, value, node, options) {
-                            var object_type = object.type;
-                            var id_template_str = '<div class="action-buttons">' +
-                                '<a onclick="javascript:scrollToTaskItem(' + object.start + ')" title="Scroll To"><i class="icon-exchange"></i></a>' +
-                                '<a href="' + object.link + '" title="View"><i class="icon-info-sign"></i></a>' +
-                                '</div>';
-
-                            var id_template = doT.template(id_template_str);
-                            var node_js = $(node);
-                            node_js.addClass(object.status).append(
-                                $.parseHTML(id_template(object))
-                            );
-                            // check if hidden
-                            var column_id = 'action';
-                            var grid = this.grid;
-                            if (grid.is_hidden_column(column_id)) {
-                                // also hide this one by default
-                                node_js.css({'display': 'none'});
-                            }
-                        },
-                        resizable: false
-                    },
+//                    action: {
+//                        label: "Action",
+//                        sortable: false,
+//                        get: function (object) {
+//                            return object;
+//                        },
+//                        renderCell: function (object, value, node, options) {
+//                            var entity_type = object.entity_type;
+//                            var id_template_str = '<div class="action-buttons">' +
+//                                '<a onclick="javascript:scrollToTaskItem(' + object.start + ')" title="Scroll To"><i class="icon-exchange"></i></a>' +
+//                                '<a href="' + object.link + '" title="View"><i class="icon-info-sign"></i></a>' +
+//                                '</div>';
+//
+//                            var id_template = doT.template(id_template_str);
+//                            var node_js = $(node);
+//                            node_js.addClass('status_' + object.status).append(
+//                                $.parseHTML(id_template(object))
+//                            );
+//                            // check if hidden
+//                            var column_id = 'action';
+//                            var grid = this.grid;
+//                            if (grid.is_hidden_column(column_id)) {
+//                                // also hide this one by default
+//                                node_js.css({'display': 'none'});
+//                            }
+//                        },
+//                        resizable: false
+//                    },
                     id: {
                         label: "ID",
                         sortable: false,
@@ -278,7 +278,7 @@ define([
                             return object;
                         },
                         renderCell: function (object, value, node, options) {
-                            $(node).addClass(object.status).append(
+                            $(node).addClass('status_' + object.status).append(
                                 $.parseHTML('<a href="' + object.link + '">' + object.id + '</a>')
                             );
                             // check if hidden
@@ -302,21 +302,16 @@ define([
                             renderCell: function (object, value, node, options) {
                                 var template = templates.taskEditRow;
                                 var template_var = {};
+
                                 template_var.font_weight = object.hasChildren ? 'bold' : 'normal';
                                 template_var.contextMenuClass = 'taskEditRow';
-                                if (object.type === 'Project') {
-                                    template = templates.projectEditRow;
+
+                                if (object.entity_type === 'Project') {
                                     template_var.contextMenuClass = 'projectEditRow';
                                 } else {
                                     if (object.hasChildren) {
-                                        template = templates.parentTaskEditRow;
                                         template_var.contextMenuClass = 'parentTaskEditRow';
-                                    }// else {
-//                                        template_var.responsible = {
-//                                            id: object.responsible.id,
-//                                            name: object.responsible.name
-//                                        };
-                                    //}
+                                    }
                                 }
 
                                 template_var.hasChildren = object.hasChildren;
@@ -325,9 +320,9 @@ define([
                                 template_var.name = object.name;
                                 template_var.start = object.start;
                                 template_var.end = object.end;
-                                template_var.type = object.type;
+                                template_var.entity_type = object.entity_type;
 
-                                $(node).addClass(object.status).append(
+                                $(node).addClass('status_' + object.status).append(
                                     $.parseHTML(template(template_var))
                                 );
                                 // check if hidden
@@ -355,6 +350,26 @@ define([
                             }
                         }
                     ),
+                    priority: {
+                        label: 'Prior.',
+                        sortable: false,
+                        resizable: true,
+                        get: function (object) {
+                            return object;
+                        },
+                        renderCell: function (object, value, node, options) {
+                            $(node).addClass('status_' + object.status).append(
+                                $.parseHTML('<div class="status_' + object.status + '">' + object.priority + '</div>')
+                            );
+                            // check if hidden
+                            var column_id = 'priority';
+                            var grid = this.grid;
+                            if (grid.is_hidden_column(column_id)) {
+                                // also hide this one by default
+                                $(node).css({'display': 'none'});
+                            }
+                        }
+                    },
                     complete: {
                         label: '%',
                         sortable: false,
@@ -368,8 +383,8 @@ define([
                             // check if it has a floating part
                             p_complete_str = p_complete.toFixed(0);
 
-                            $(node).addClass(object.status).append(
-                                $.parseHTML('<div class="' + object.status + '">' + p_complete_str + '</div>')
+                            $(node).addClass('status_' + object.status).append(
+                                $.parseHTML('<div class="status_' + object.status + '">' + p_complete_str + '</div>')
                             );
                             // check if hidden
                             var column_id = 'complete';
@@ -395,7 +410,37 @@ define([
                                     ret = ret + (ret === "" ? "" : ", ") + templates.resourceLink(resource);
                                 }
                             }
-                            $(node).addClass(object.status).append(
+                            $(node).addClass('status_' + object.status).append(
+                                $.parseHTML(ret)
+                            );
+                            // check if hidden
+                            var column_id = 'resource';
+                            var grid = this.grid;
+                            if (grid.is_hidden_column(column_id)) {
+                                // also hide this one by default
+                                $(node).css({'display': 'none'});
+                            }
+                        }
+                    },
+                    responsible: {
+                        label: "Responsible",
+                        sortable: false,
+                        resizable: true,
+                        get: function (object) {
+                            return object;
+                        },
+                        renderCell: function (object, value, node, options) {
+                            var ret = '', i, responsible;
+                            if (object.responsible) {
+                                for (i = 0; i < object.responsible.length; i++) {
+                                    responsible = {
+                                        'id': object.responsible[i],
+                                        'name': get_user_name(object.responsible[i])
+                                    };
+                                    ret = ret + (ret === "" ? "" : ", ") + templates.resourceLink(responsible);
+                                }
+                            }
+                            $(node).addClass('status_' + object.status).append(
                                 $.parseHTML(ret)
                             );
                             // check if hidden
@@ -417,6 +462,7 @@ define([
                         renderCell: function (object, value, node, options) {
                             // map time unit names
                             var time_unit_names = {
+                                'min': 'Minute',
                                 'h': 'Hour',
                                 'd': 'Day',
                                 'w': 'Week',
@@ -424,7 +470,7 @@ define([
                                 'y': 'Year'
                             }, timing = '';
 
-                            if (object.type !== 'Project') {
+                            if (object.entity_type !== 'Project') {
                                 if (!object.hasChildren) {
                                     // do not add schedule model if it is the default (effort)
                                     if (object.schedule_model !== 'effort') {
@@ -444,7 +490,7 @@ define([
                                     }
                                 }
                             }
-                            $(node).addClass(object.status).text(timing);
+                            $(node).addClass('status_' + object.status).text(timing);
                             // check if hidden
                             var column_id = 'timing';
                             var grid = this.grid;
@@ -463,7 +509,7 @@ define([
                         },
                         renderCell: function (object, value, node, options) {
                             var start_date = moment(object.start);
-                            $(node).addClass(object.status);
+                            $(node).addClass('status_' + object.status);
                             $(node).text(
                                 start_date.format("YYYY-MM-DD HH:mm")
                             );
@@ -485,7 +531,7 @@ define([
                         },
                         renderCell: function (object, value, node, options) {
                             var end_date = moment(object.end);
-                            $(node).addClass(object.status);
+                            $(node).addClass('status_' + object.status);
                             $(node).text(
                                 end_date.format("YYYY-MM-DD HH:mm")
                             );
@@ -506,9 +552,9 @@ define([
                             return object;
                         },
                         renderCell: function (object, value, node, options) {
-                            $(node).addClass(object.status);
+                            $(node).addClass('status_' + object.status);
                             $(node).append(
-                                $.parseHTML('<span class="' + object.status + '">' + object.status + '</span>')
+                                $.parseHTML('<span class="status_' + object.status + '">' + object.status + '</span>')
                             );
                             // check if hidden
                             var column_id = 'status';
@@ -526,9 +572,9 @@ define([
                             return object;
                         },
                         renderCell: function(object, value, node, options) {
-                            $(node).addClass(object.status);
+                            $(node).addClass('status_' + object.status);
 
-                            if (object.type !== 'Project') {
+                            if (object.entity_type !== 'Project') {
                                 var link_template = doT.template('<a href="/tasks/{{= it.id}}/view">{{= it.name}}</a>');
                                 var link_string = '';
                                 for (var i = 0; i < object.dependencies.length; i += 1) {

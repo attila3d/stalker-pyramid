@@ -21,6 +21,7 @@
 
 import time
 import logging
+import datetime
 import transaction
 
 from pyramid.response import Response
@@ -32,7 +33,9 @@ from stalker.exceptions import OverBookedError, DependencyViolationError
 
 from stalker_pyramid.views import (get_logged_in_user,
                                    PermissionChecker, milliseconds_since_epoch,
-                                   get_date, StdErrToHTMLConverter)
+                                   get_date, StdErrToHTMLConverter,
+                                   local_to_utc)
+from stalker_pyramid.views.task import get_task_full_path
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -55,8 +58,8 @@ def create_time_log_dialog(request):
     """
     logger.debug('inside time_log_dialog')
 
-    came_from = request.params.get('came_from','/')
-    logger.debug('came_from %s: '% came_from)
+    came_from = request.params.get('came_from', '/')
+    logger.debug('came_from %s: ' % came_from)
 
     # get logged in user
     logged_in_user = get_logged_in_user(request)
@@ -74,7 +77,7 @@ def create_time_log_dialog(request):
         'studio': studio,
         'logged_in_user': logged_in_user,
         'entity': entity,
-        'came_from':came_from,
+        'came_from': came_from,
         'milliseconds_since_epoch': milliseconds_since_epoch,
     }
 
@@ -106,7 +109,7 @@ def update_time_log_dialog(request):
         'has_permission': PermissionChecker(request),
         'studio': studio,
         'logged_in_user': logged_in_user,
-        'task': time_log.task,
+        'entity': time_log.task,
         'came_from': came_from,
         'time_log': time_log,
         'milliseconds_since_epoch': milliseconds_since_epoch
@@ -120,38 +123,57 @@ def create_time_log(request):
     """runs when creating a time_log
     """
     logger.debug('create_time_log method starts')
+
+    #**************************************************************************
+    # task
+
+    logged_in_user = get_logged_in_user(request)
+    utc_now = local_to_utc(datetime.datetime.now())
+
     task_id = request.params.get('task_id')
-
-    logger.debug('task_id : %s' % task_id)
-
     task = Task.query.filter(Task.id == task_id).first()
+
+    logger.debug('task_id     : %s' % task_id)
+    logger.debug('task        : %s' % task)
 
     if not task:
         return Response('No task with id %s found' % task_id, 500)
 
     #**************************************************************************
-    # collect data
+    # resource
     resource_id = request.params.get('resource_id', None)
     resource = User.query.filter(User.id == resource_id).first()
 
+    logger.debug('resource_id : %s' % resource_id)
+    logger.debug('resource : %s' % resource)
+
+    if not resource:
+        return Response('No user with id %s found' % resource_id, 500)
+
+    #**************************************************************************
+    # collect data
     start_date = get_date(request, 'start')
     end_date = get_date(request, 'end')
-
+    auto_split_working_hours = request.params.get('auto_split_wh', None)
     description = request.params.get('description', '')
 
-    logger.debug('task_id     : %s' % task_id)
-    logger.debug('task        : %s' % task)
-    logger.debug('resource_id : %s' % resource_id)
     logger.debug('start_date  : %s' % start_date)
     logger.debug('end_date    : %s' % end_date)
+    logger.debug('auto_split_working_hours  : %s' % auto_split_working_hours)
+    logger.debug('description    : %s' % description)
 
     if task and resource and start_date and end_date:
         # we are ready to create the time log
         # TimeLog should handle the extension of the effort
         logger.debug('got all the data')
         try:
+            logger.debug('creating time log through task')
             assert isinstance(task, Task)
-            task.create_time_log(resource, start_date, end_date)
+            time_log = task.create_time_log(resource, start_date, end_date)
+            time_log.description = description
+            time_log.created_by = logged_in_user
+            time_log.date_created = utc_now
+            logger.debug('timelog created!')
         except (OverBookedError, TypeError, DependencyViolationError) as e:
             converter = StdErrToHTMLConverter(e)
             response = Response(converter.html(), 500)
@@ -172,7 +194,7 @@ def create_time_log(request):
         return response
 
     logger.debug('successfully created time log!')
-    response = Response('successfully created time log!')
+    response = Response(get_task_full_path(task.id))
 
     return response
 
@@ -184,6 +206,10 @@ def update_time_log(request):
     """runs when updating a time_log
     """
     logger.debug('inside update_time_log')
+
+    logged_in_user = get_logged_in_user(request)
+    utc_now = local_to_utc(datetime.datetime.now())
+
     # time_log_id = int(request.params.get('time_log_id'))
     time_log_id = request.matchdict.get('id', -1)
     time_log = TimeLog.query.filter_by(id=time_log_id).first()
@@ -212,8 +238,10 @@ def update_time_log(request):
             time_log.end = end_date
             time_log.description = description
             time_log.resource = resource
+            time_log.updated_by = logged_in_user
+            time_log.date_updated = utc_now
         except OverBookedError as e:
-            logger.debug('e.message: %s' % str(e))
+            logger.debug('e: %s' % str(e))
             response = Response(str(e), 500)
             transaction.abort()
             return response
@@ -237,7 +265,7 @@ def update_time_log(request):
     renderer='json'
 )
 def get_time_logs(request):
-    """returns all the Shots of the given Project
+    """returns all the time logs of the given entity
     """
     logger.debug('get_time_logs is running')
     entity_id = request.matchdict.get('id', -1)
@@ -302,9 +330,9 @@ def get_time_logs(request):
     ) as parent_names on "TimeLogs".task_id = parent_names.id
     """
 
-    if entity_type == u'User':
+    if entity_type == 'User':
         sql_query += 'where "TimeLogs".resource_id = %s' % entity_id
-    elif entity_type == u'Task':
+    elif entity_type == 'Task':
         sql_query += 'where "TimeLogs".task_id = %s' % entity_id
     elif entity_type is None:
         return []

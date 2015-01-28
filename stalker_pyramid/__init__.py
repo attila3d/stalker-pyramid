@@ -25,18 +25,21 @@ import pyramid_beaker
 
 from zope.sqlalchemy import ZopeTransactionExtension
 
-__version__ = '0.1.7'
+__version__ = '0.1.11'
 
 
 # before anything about stalker create the defaults
 from stalker.config import defaults
-from stalker.models.auth import group_finder
 
 import logging
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
+
+
+stalker_server_external_url = None
+stalker_server_internal_url = None
 
 
 def main(global_config, **settings):
@@ -50,10 +53,18 @@ def main(global_config, **settings):
     from stalker import db
     from stalker.db import DBSession
 
+    from stalker_pyramid.views.auth import group_finder
+
     # use the ZopeTransactionExtension for session
     db.setup(settings)
     DBSession.remove()
     DBSession.configure(extension=ZopeTransactionExtension())
+
+    # setup internal and external urls
+    global stalker_server_external_url
+    global stalker_server_internal_url
+    stalker_server_external_url = settings.get('stalker.external_url')
+    stalker_server_internal_url = settings.get('stalker.internal_url')
 
     # setup authorization and authentication
     authn_policy = AuthTktAuthenticationPolicy(
@@ -65,7 +76,7 @@ def main(global_config, **settings):
 
     config = Configurator(
         settings=settings,
-        root_factory='stalker.models.auth.RootFactory'
+        root_factory='stalker_pyramid.views.auth.RootFactory'
     )
     config.set_authentication_policy(authn_policy)
     config.set_authorization_policy(authz_policy)
@@ -122,6 +133,7 @@ def main(global_config, **settings):
 
     config.add_route('upload_entity_thumbnail_dialog', 'entities/{id}/thumbnail/upload/dialog')
     config.add_route('upload_entity_reference_dialog', 'entities/{id}/references/upload/dialog')
+    config.add_route('upload_entity_output_dialog', 'entities/{id}/output/upload/dialog')
 
     config.add_route('create_entity_users_dialog',     'entities/{id}/users/create/dialog')
 
@@ -132,10 +144,6 @@ def main(global_config, **settings):
 
     config.add_route('delete_entity_dialog', 'entities/{id}/delete/dialog')
     config.add_route('delete_entity', 'entities/{id}/delete')
-
-    config.add_route('create_entity_note', 'entities/{id}/note/create')
-    config.add_route('delete_note_dialog', 'notes/{id}/delete/dialog')
-    config.add_route('delete_note', 'notes/{id}/delete')
 
     # get routes returns json
     config.add_route('get_entity',                     'entities/{id}/')
@@ -148,6 +156,8 @@ def main(global_config, **settings):
     config.add_route('get_entity_groups',              'entities/{id}/groups/')
     config.add_route('get_entity_tasks',               'entities/{id}/tasks/')
     config.add_route('get_entity_tasks_stats',         'entities/{id}/tasks_stats/')
+
+    # TODO: Do we still really need "get_entity_tasks_by_filter"
     config.add_route('get_entity_tasks_by_filter',     'entities/{id}/tasks/filter/{f_id}/')
 
     config.add_route('get_entity_tickets',             'entities/{id}/tickets/')
@@ -160,17 +170,18 @@ def main(global_config, **settings):
     config.add_route('get_entity_assets_count',        'entities/{id}/assets/count/')
     config.add_route('get_entity_shots',               'entities/{id}/shots/')
     config.add_route('get_entity_shots_count',         'entities/{id}/shots/count/')
+    config.add_route('get_entity_scenes',              'entities/{id}/scenes/')
+    config.add_route('get_entity_scenes_count',        'entities/{id}/scenes/count/')
     config.add_route('get_entity_vacations',           'entities/{id}/vacations/')
     config.add_route('get_entity_vacations_count',     'entities/{id}/vacations/count/')
     config.add_route('get_entity_entities_out_stack',  'entities/{id}/{entities}/out_stack/' )
     config.add_route('get_entity_events',              'entities/{id}/events/')  #json
-    config.add_route('get_entity_versions',            'entities/{id}/versions/')  # json
-    config.add_route('get_entity_versions_used_by_tasks', 'entities/{id}/version/used_by/tasks/')
-    config.add_route('get_entity_notes',            'entities/{id}/notes/') #json
+    config.add_route('get_entity_notes',               'entities/{id}/notes/') #json
 
     config.add_route('list_entity_users',              'entities/{id}/users/list')
     config.add_route('list_entity_departments',        'entities/{id}/departments/list')  # html
     config.add_route('list_entity_groups',             'entities/{id}/groups/list')  # html
+    config.add_route('list_entity_scenes',             'entities/{id}/scenes/list')  # html
     config.add_route('list_entity_shots',              'entities/{id}/shots/list')  # html
     config.add_route('list_entity_tasks',              'entities/{id}/tasks/list')  # html
     config.add_route('list_entity_tasks_by_filter',    'entities/{id}/tasks/filter/{f_id}/list')  # html
@@ -180,7 +191,7 @@ def main(global_config, **settings):
     config.add_route('list_entity_vacations',          'entities/{id}/vacations/list')  # html
     config.add_route('list_entity_versions',           'entities/{id}/versions/list')  # html
     config.add_route('list_entity_resources',          'entities/{id}/resources/list')  # html
-    config.add_route('list_entity_notes',            'entities/{id}/notes/list') #html
+    config.add_route('list_entity_notes',              'entities/{id}/notes/list') #html
 
 
     config.add_route('append_entities_to_entity_dialog',  'entities/{id}/{entities}/append/dialog')
@@ -191,11 +202,22 @@ def main(global_config, **settings):
     config.add_route('view_entity_group',              'entities/{eid}/groups/{id}/view')
     config.add_route('view_entity_department',         'entities/{eid}/departments/{id}/view')
 
+
     # *************************************************************************
-    # Thumbnail References and Links
+    # Notes
+    config.add_route('create_note', 'note/create')
+    config.add_route('update_note', 'note/{id}/update')
+    config.add_route('delete_note_dialog', 'notes/{id}/delete/dialog')
+    config.add_route('delete_note', 'notes/{id}/delete')
 
-    config.add_route('get_task_versions',    'tasks/{id}/versions/')  # json
+    # *************************************************************************
+    # Thumbnail  and Links
 
+    config.add_route('upload_files',         'upload_files')
+    config.add_route('assign_thumbnail',     'assign_thumbnail')
+
+    # *************************************************************************
+    # References
 
     config.add_route('get_task_references',        'tasks/{id}/references/')  # json
     config.add_route('get_task_references_count',  'tasks/{id}/references/count/')  # json
@@ -205,16 +227,31 @@ def main(global_config, **settings):
     config.add_route('get_shot_references',        'shots/{id}/references/')  # json
     config.add_route('get_shot_references_count',  'shots/{id}/references/count/')  # json
 
-
-
     config.add_route('get_references',       'references/')
     config.add_route('get_reference',        'references/{id}')
 
+    config.add_route('assign_reference',     'assign_reference')
     config.add_route('delete_reference',     'references/{id}/delete')
 
-    config.add_route('upload_files',         'upload_files')
-    config.add_route('assign_thumbnail',     'assign_thumbnail')
-    config.add_route('assign_reference',     'assign_reference')
+    config.add_route('update_reference_dialog', 'references/{id}/update/dialog')
+    config.add_route('update_reference',        'references/{id}/update')
+
+    # *************************************************************************
+    # Outputs
+
+    config.add_route('list_task_outputs',           'tasks/{id}/outputs/list')  # html
+
+    config.add_route('get_entity_outputs',          'entities/{id}/outputs/')
+    config.add_route('get_entity_outputs_count',    'entities/{id}/outputs/count/')
+
+    config.add_route('get_task_outputs',            'tasks/{id}/outputs/')
+    config.add_route('get_task_outputs_count',      'tasks/{id}/outputs/count/')
+
+    config.add_route('get_version_outputs',         'versions/{id}/outputs/')
+    config.add_route('get_version_outputs_count',   'versions/{id}/outputs/count/')
+
+    config.add_route('assign_output',               'assign_output')
+    config.add_route('delete_output',               'outputs/{id}/delete')
 
     # *************************************************************************
     # Studio
@@ -237,6 +274,10 @@ def main(global_config, **settings):
     config.add_route('list_studio_departments',     'studios/{id}/departments/list')  # html
     config.add_route('list_studio_groups',          'groups/list')  # html
 
+    config.add_route('schedule_info',               'schedule_info')  # json
+    config.add_route('studio_scheduling_mode',      'studio_scheduling_mode')
+    config.add_route('auto_schedule_tasks',         'auto_schedule_tasks')
+
     # *************************************************************************
     # Project
     config.add_route('project_dialog',             'projects/{id}/{mode}/dialog')
@@ -249,6 +290,7 @@ def main(global_config, **settings):
     config.add_route('update_project',             'projects/{id}/update')
 
     config.add_route('view_project',               'projects/{id}/view')
+    config.add_route('view_project_reports',       'projects/{id}/view/reports')
 
     config.add_route('list_projects',              'projects/list')  # html
     config.add_route('list_project_users',         'projects/{id}/users/list')
@@ -259,6 +301,8 @@ def main(global_config, **settings):
     config.add_route('list_project_tickets',       'projects/{id}/tickets/list')
     config.add_route('list_project_references',    'projects/{id}/references/list')
     config.add_route('list_project_reviews',       'projects/{id}/reviews/list')  # html
+    config.add_route('list_project_dailies',       'projects/{id}/dailies/list')  # html
+    # config.add_route('view_project_tasks_by_filter',    'projects/{id}/tasks/filter/{f_id}/list')  # html
 
     config.add_route('get_projects',               'projects/')
     config.add_route('get_project_users',          'projects/{id}/users/')
@@ -269,15 +313,38 @@ def main(global_config, **settings):
     config.add_route('get_project_shots_count',    'projects/{id}/shots/count/')
     config.add_route('get_project_sequences',      'projects/{id}/sequences/')
     config.add_route('get_project_sequences_count', 'projects/{id}/sequences/count/')
+    config.add_route('get_project_scenes',          'projects/{id}/scenes/')
+    config.add_route('get_project_scenes_count',    'projects/{id}/scenes/count/')
     config.add_route('get_project_references',     'projects/{id}/references/')  # json
     config.add_route('get_project_references_count', 'projects/{id}/references/count/')  # json
-    config.add_route('get_project_tickets',        'projects/{id}/tickets/')  # json
-    config.add_route('get_project_tickets_count',  'projects/{id}/tickets/count/')  # json
-    config.add_route('get_project_reviews',      'projects/{id}/reviews/') #json
+    config.add_route('get_project_tickets',         'projects/{id}/tickets/')  # json
+    config.add_route('get_project_tickets_count',   'projects/{id}/tickets/count/')  # json
+    config.add_route('get_project_reviews',         'projects/{id}/reviews/') #json
     config.add_route('get_project_reviews_count',      'projects/{id}/reviews/count/') #json
+    config.add_route('get_project_dailies',         'projects/{id}/dailies/') #json
+    config.add_route('get_project_dailies_count',   'projects/{id}/dailies/count/') #json
 
     config.add_route('get_project_tasks_today',    'projects/{id}/tasks/{action}/today/')  # json
     config.add_route('get_project_tasks_in_date',  'projects/{id}/tasks/{action}/{date}/')  # json
+
+    # *************************************************************************
+    # Dailies
+    config.add_route('create_daily_dialog', 'dailies/create/dialog')
+    config.add_route('update_daily_dialog', 'dailies/{id}/update/dialog')
+
+    config.add_route('create_daily',        'dailies/create')
+    config.add_route('update_daily',        'dailies/{id}/update')
+    config.add_route('inline_update_daily', 'dailies/{id}/update/inline')
+    config.add_route('inline_update_daily_dialog', 'dailies/{id}/update/inline/dialog')
+
+    config.add_route('view_daily',          'dailies/{id}/view')
+    config.add_route('get_daily_outputs',          'dailies/{id}/outputs/') # json
+
+    config.add_route('append_link_to_daily_dialog', 'links/{id}/dailies/append/dialog')
+    config.add_route('append_link_to_daily', 'links/{id}/dailies/{did}/append')
+    config.add_route('remove_link_to_daily_dialog', 'links/{id}/dailies/{did}/remove/dialog')
+    config.add_route('remove_link_to_daily', 'links/{id}/dailies/{did}/remove')
+
 
     # *************************************************************************
     # ImageFormat
@@ -300,6 +367,18 @@ def main(global_config, **settings):
 
     config.add_route('list_repositories', 'repositories/list')  # html
     config.add_route('get_repositories', 'repositories/')  # json
+
+    # serve files in repository
+    config.add_route('serve_repository_files',
+                     'repositories/{id}/{partial_file_path:[a-zA-Z0-9/\._\-\+\(\)]*}')
+
+    config.add_route(
+        'forced_download_repository_files',
+        'FDrepositories/{id}/{partial_file_path:[a-zA-Z0-9/\._\-\+\(\)]*}'
+    )
+
+
+    config.add_route('video_player', 'video_player')  #html
 
     # *************************************************************************
     # Structure
@@ -340,6 +419,7 @@ def main(global_config, **settings):
     config.add_route('get_user_groups',       'users/{id}/groups/')  # json
     config.add_route('get_user_tasks',        'users/{id}/tasks/')  # json
     config.add_route('get_user_tasks_count',  'users/{id}/tasks/count/')  # json
+    config.add_route('get_user_tasks_responsible_of_count', 'users/{id}/tasks/responsible_of/count') # html
     config.add_route('get_user_vacations',    'users/{id}/vacations/')  # json
     config.add_route('get_user_vacations_count', 'users/{id}/vacations/count/')  # json
     config.add_route('get_user_tickets',      'users/{id}/tickets/')  # json
@@ -360,8 +440,9 @@ def main(global_config, **settings):
     config.add_route('list_user_projects',    'users/{id}/projects/list')  # html
     config.add_route('list_user_time_logs',   'users/{id}/time_logs/list')  # html
     config.add_route('list_user_tickets',     'users/{id}/tickets/list')  # html
-    config.add_route('list_user_tasks_responsible_of', 'users/{id}/tasks/list/responsible_of') # html
-    config.add_route('list_user_reviews',          'users/{id}/reviews/list')  # html
+    config.add_route('list_user_tasks_responsible_of',       'users/{id}/tasks/list/responsible_of') # html
+    config.add_route('list_user_tasks_watching',       'users/{id}/tasks/list/watching') # html
+    config.add_route('list_user_reviews',              'users/{id}/reviews/list')  # html
 
     config.add_route('view_user_tasks',       'users/{id}/tasks/view')  # html
     config.add_route('view_user_versions',    'users/{id}/versions/view')
@@ -445,6 +526,10 @@ def main(global_config, **settings):
     config.add_route('get_shots_children_task_type',  'shots/children/task_type/')  # json
 
     # *************************************************************************
+    # Scene
+    config.add_route('get_scenes_children_task_type',  'scenes/children/task_type/')  # json
+
+    # *************************************************************************
     # Sequence
     config.add_route('create_sequence_dialog', 'sequences/{id}/create/dialog')
     config.add_route('update_sequence_dialog', 'sequences/{id}/update/dialog')
@@ -470,19 +555,32 @@ def main(global_config, **settings):
 
     # *************************************************************************
     # Task
+    config.add_route('get_task_external_link',              'tasks/{id}/external_link')
+    config.add_route('get_task_internal_link',              'tasks/{id}/internal_link')
 
     # Dialogs
-    config.add_route('create_task_dialog',       'tasks/{id}/create/dialog')
-    config.add_route('update_task_dialog',       'tasks/{id}/update/dialog')
-    config.add_route('review_task_dialog',       'tasks/{id}/review/dialog')
+    config.add_route('create_task_dialog',                  'tasks/{id}/create/dialog')
+    config.add_route('update_task_dialog',                  'tasks/{id}/update/dialog')
+    config.add_route('review_task_dialog',                  'tasks/{id}/review/dialog')
+    config.add_route('cleanup_task_new_reviews_dialog',     'tasks/{id}/cleanup_new_reviews/dialog')
 
     # Actions
-    config.add_route('create_task',              'tasks/create')
-    config.add_route('update_task',              'tasks/{id}/update')
-    config.add_route('inline_update_task',       'tasks/{id}/update/inline')
-    config.add_route('review_task',              'tasks/{id}/review')
+    config.add_route('create_task',                         'tasks/create')
+    config.add_route('update_task',                         'tasks/{id}/update')
+    config.add_route('inline_update_task',                  'tasks/{id}/update/inline')
+    config.add_route('update_task_schedule_timing',         'tasks/{id}/update/schedule_timing')
+    config.add_route('update_task_schedule_timing_dialog',  'tasks/{id}/update/schedule_timing/dialog')
+    config.add_route('update_task_dependencies',            'tasks/{id}/update/dependencies')
+    config.add_route('update_task_dependencies_dialog',     'tasks/{id}/update/dependencies/dialog')
+    config.add_route('force_task_status_dialog',            'tasks/{id}/force_status/{status_code}/dialog')
+    config.add_route('force_task_status',                   'tasks/{id}/force_status/{status_code}')
+    config.add_route('resume_task_dialog',                  'tasks/{id}/resume/dialog')
+    config.add_route('resume_task',                  'tasks/{id}/resume')
+    config.add_route('review_task',                         'tasks/{id}/review')
+    config.add_route('cleanup_task_new_reviews',            'tasks/{id}/cleanup_new_reviews')
 
-    config.add_route('duplicate_task_hierarchy', 'tasks/{id}/duplicate')
+    config.add_route('duplicate_task_hierarchy',            'tasks/{id}/duplicate')
+    config.add_route('duplicate_task_hierarchy_dialog',     'tasks/{id}/duplicate/dialog')
 
     config.add_route('view_task',                'tasks/{id}/view')
 
@@ -495,13 +593,15 @@ def main(global_config, **settings):
     config.add_route('get_gantt_tasks',          'tasks/{id}/gantt')
     config.add_route('get_gantt_task_children',  'tasks/{id}/children/gantt')
 
-    config.add_route('auto_schedule_tasks', 'auto_schedule_tasks')
-
     config.add_route('get_tasks',         'tasks/')
-    config.add_route('get_task',          'tasks/{id}/')
-    config.add_route('get_task_children', 'tasks/{id}/children/')
-    config.add_route('get_task_events',   'tasks/{id}/events/')  #json
+    config.add_route('get_tasks_count',         'tasks/count/')
 
+    config.add_route('get_task',          'tasks/{id}/')
+    config.add_route('get_task_events',   'tasks/{id}/events/')  #json
+    config.add_route('get_task_children_task_type',  'tasks/{type}/children/task_type/')  # json
+
+
+    config.add_route('get_task_related_entities',  'tasks/{id}/related/{e_type}/') # json
     config.add_route('get_task_dependency',  'tasks/{id}/dependency/{type}/') # json
     config.add_route('get_task_tickets',  'tasks/{id}/tickets')  # json
 
@@ -516,12 +616,29 @@ def main(global_config, **settings):
     config.add_route('approve_task',   'tasks/{id}/approve')
     config.add_route('request_revision',   'tasks/{id}/request_revision')
     config.add_route('request_extra_time', 'tasks/{id}/request_extra_time')
+    config.add_route('request_extra_time_dialog', 'tasks/{id}/request_extra_time/dialog')
+
+    config.add_route('get_task_resources',        'tasks/{id}/resources/') #json
+    config.add_route('remove_task_user_dialog',   'tasks/{id}/remove/{user_type}/{user_id}/dialog')
+    config.add_route('remove_task_user',          'tasks/{id}/remove/{user_type}/{user_id}')
+    config.add_route('change_tasks_users_dialog', 'tasks/change/{user_type}/dialog')
+    config.add_route('change_tasks_users',        'tasks/change/{user_type}')
+    config.add_route('change_task_users_dialog',  'tasks/{id}/change/{user_type}/dialog')
+    config.add_route('change_task_users',         'tasks/{id}/change/{user_type}')
+    config.add_route('change_tasks_priority_dialog',     'tasks/change_priority/dialog')
+    config.add_route('change_tasks_priority',     'tasks/change_priority')
+
+    config.add_route('add_tasks_dependencies_dialog', 'tasks/add/dependencies/dialog')
+    config.add_route('add_tasks_dependencies',        'tasks/add/dependencies')
 
     config.add_route('delete_task',        'tasks/{id}/delete')
     config.add_route('delete_task_dialog', 'tasks/{id}/delete/dialog')
 
     config.add_route('fix_task_statuses',      'tasks/{id}/fix/statuses/')
     config.add_route('fix_task_schedule_info', 'tasks/{id}/fix/schedule_info/')
+
+    config.add_route('watch_task',   'tasks/{id}/watch')
+    config.add_route('unwatch_task', 'tasks/{id}/unwatch')
 
     # *************************************************************************
     # TimeLog
@@ -571,18 +688,21 @@ def main(global_config, **settings):
 
     # *************************************************************************
     # Version
-    config.add_route('dialog_create_task_version', 'tasks/{id}/versions/create/dialog')
-    config.add_route('dialog_update_version',      'versions/{id}/update/dialog')
+    config.add_route('create_version_dialog',          'tasks/{tid}/versions/create/dialog')
+    config.add_route('update_version_dialog',          'versions/{id}/update/dialog')
 
-    config.add_route('create_version', 'versions/create')
-    config.add_route('update_version', 'versions/{id}/update')
+    config.add_route('create_version',                      'versions/create')
 
-    config.add_route('assign_version', 'assign_version') # TODO: update this address
+    config.add_route('view_version',                        'versions/{id}/view')
+    config.add_route('list_version_outputs',                'versions/{id}/outputs/list')  # html
+    config.add_route('list_version_inputs',                 'versions/{id}/inputs/list')  # html
+    config.add_route('list_version_children',               'versions/{id}/children/list')  # html
 
-    config.add_route('view_version',          'versions/{id}/view')
-    config.add_route('list_version_outputs',  'versions/{id}/outputs/list')  # html
-    config.add_route('list_version_inputs',   'versions/{id}/inputs/list')  # html
-    config.add_route('list_version_children', 'versions/{id}/children/list')  # html
+    config.add_route('get_task_versions',                   'tasks/{id}/versions/')  # jsons
+    config.add_route('get_entity_versions',                 'entities/{id}/versions/')  # json
+    config.add_route('get_entity_versions_used_by_tasks',   'entities/{id}/version/used_by/tasks/') # json
+
+    config.add_route('pack_version', 'versions/{id}/pack')  # json
 
     # *************************************************************************
     # Department
@@ -634,12 +754,26 @@ def main(global_config, **settings):
 
     # *************************************************************************
     # Tag
-
     config.add_route('get_tags', 'tags/')
 
     # *************************************************************************
     # Type
     config.add_route('get_types', 'types/')
+
+    # *************************************************************************
+    # Role
+    config.add_route('get_roles', 'roles/')  # json
+
+    # *************************************************************************
+    # Anima
+    config.add_route('add_related_assets_dialog', 'entities/{id}/assets/add/dialog')
+    config.add_route('add_related_assets', 'entities/{id}/assets/add')
+    config.add_route('remove_related_asset_dialog', 'entities/{id}/assets/{a_id}/remove/dialog')
+    config.add_route('remove_related_asset', 'entities/{id}/assets/{a_id}/remove')
+
+    # *************************************************************************
+    # Test
+    config.add_route('test_page', 'test_page')
 
     config.scan(ignore='stalker.env')
     return config.make_wsgi_app()

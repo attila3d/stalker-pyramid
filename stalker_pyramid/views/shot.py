@@ -26,8 +26,10 @@ from stalker.db import DBSession
 from stalker import Sequence, StatusList, Status, Shot, Project, Entity
 
 import logging
+import transaction
 from webob import Response
-from stalker_pyramid.views import get_logged_in_user, PermissionChecker
+from stalker_pyramid.views import get_logged_in_user, PermissionChecker, \
+    local_to_utc
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -92,6 +94,7 @@ def create_shot(request):
     return HTTPOk()
 
 
+
 @view_config(
     route_name='update_shot'
 )
@@ -131,6 +134,8 @@ def update_shot(request):
         shot.cut_in = cut_in
         shot.cut_out = cut_out
 
+
+
         DBSession.add(shot)
 
     else:
@@ -162,27 +167,13 @@ def get_shots_children_task_type(request):
 
     result = DBSession.connection().execute(sql_query)
 
-    return_data = [
+    return [
         {
             'id': r[0],
             'name': r[1]
-
         }
         for r in result.fetchall()
     ]
-
-    content_range = '%s-%s/%s'
-
-    type_count = len(return_data)
-    content_range = content_range % (0, type_count - 1, type_count)
-
-    logger.debug('content_range : %s' % content_range)
-
-    resp = Response(
-        json_body=return_data
-    )
-    resp.content_range = content_range
-    return resp
 
 
 @view_config(
@@ -194,15 +185,34 @@ def get_shots_children_task_type(request):
     renderer='json'
 )
 def get_shots_count(request):
-    """returns the count of Shots in the given Project
+    """returns the count of Shots in the given Project or Sequence
     """
-    project_id = request.matchdict.get('id', -1)
+
+    logger.debug('get_shots_count starts')
+
+    entity_id = request.matchdict.get('id', -1)
+    entity = Entity.query.filter(Entity.id == entity_id).first()
 
     sql_query = """select
         count(1)
     from "Shots"
         join "Tasks" on "Shots".id = "Tasks".id
-    where "Tasks".project_id = %s""" % project_id
+    %(where_condition)s"""
+
+    where_condition = ''
+
+
+
+    if entity.entity_type == 'Sequence':
+        where_condition = """left join "Shot_Sequences" on "Shot_Sequences".shot_id = "Shots".id
+                          where "Shot_Sequences".sequence_id = %s""" % entity_id
+
+    elif entity.entity_type == 'Project':
+        where_condition = 'where "Tasks".project_id = %s' % entity_id
+
+    logger.debug('where_condition : %s ' % where_condition)
+    sql_query = sql_query % {'where_condition': where_condition}
+
 
     return DBSession.connection().execute(sql_query).fetchone()[0]
 
@@ -223,7 +233,7 @@ def get_shots(request):
 
     shot_id = request.params.get('entity_id', None)
 
-    logger.debug('get_shots function starts : ')
+    logger.debug('get_shots starts ')
 
     sql_query = """select
     "Shots".id as shot_id,
@@ -257,7 +267,14 @@ def get_shots(request):
                 end)) * 100.0
         )) as percent_complete,
     "Shot_Sequences".sequence_id as sequence_id,
-    "Shot_Sequences_SimpleEntities".name as sequence_name
+    "Shot_Sequences_SimpleEntities".name as sequence_name,
+    array_agg("Tasks".bid_timing) as bid_timing,
+    array_agg("Tasks".bid_unit)::text[] as bid_unit,
+    array_agg("Tasks".schedule_timing) as schedule_timing,
+    array_agg("Tasks".schedule_unit)::text[] as schedule_unit,
+    array_agg("Resources_SimpleEntities".name) as resource_name,
+    array_agg("Resources_SimpleEntities".id) as resource_id
+
 from "Tasks"
 join "Shots" on "Shots".id = "Tasks".parent_id
 join "SimpleEntities" as "Shot_SimpleEntities" on "Shots".id = "Shot_SimpleEntities".id
@@ -295,6 +312,10 @@ left outer join (
             from "TimeLogs"
             group by task_id
         ) as "Task_TimeLogs" on "Task_TimeLogs".task_id = "Tasks".id
+
+left outer join "Task_Resources" on "Tasks".id = "Task_Resources".task_id
+join "SimpleEntities" as "Resources_SimpleEntities" on "Resources_SimpleEntities".id = "Task_Resources".resource_id
+
 %(where_condition)s
 group by
     "Shots".id,
@@ -316,12 +337,10 @@ order by "Shot_SimpleEntities".name
         where_condition = 'where "Shot_Sequences".sequence_id = %s' % entity_id
 
     elif entity.entity_type == 'Project':
-        where_condition = ''
-
+        where_condition = 'where "Tasks".project_id = %s' % entity_id
 
     if shot_id:
         where_condition = 'where "Shots".id = %(shot_id)s'%({'shot_id':shot_id})
-
 
     update_shot_permission = \
         PermissionChecker(request)('Update_Shot')
@@ -357,8 +376,13 @@ order by "Shot_SimpleEntities".name
         task_statuses = r[9]
         task_statuses_color = r[10]
         task_percent_complete = r[11]
+        task_bid_timing = r[14]
+        task_bid_unit = r[15]
+        task_schedule_timing = r[16]
+        task_schedule_unit = r[17]
+        task_resource_name = r[18]
+        task_resource_id = r[19]
 
-        logger.debug('task_types_names %s ' % task_types_names)
         r_data['nulls'] = []
 
         for index1 in range(len(task_types_names)):
@@ -368,22 +392,29 @@ order by "Shot_SimpleEntities".name
                 r_data[task_types_names[index1]]= []
 
         for index in range(len(task_types_names)):
-            logger.debug('task_types_names[index]; %s ' %
-                         task_types_names[index])
+            task = {
+                     'id':task_ids[index],
+                     'name':task_names[index],
+                     'status':task_statuses[index],
+                     'percent':task_percent_complete[index],
+                     'bid_timing':task_bid_timing[index],
+                     'bid_unit':task_bid_unit[index],
+                     'schedule_timing':task_schedule_timing[index],
+                     'schedule_unit':task_schedule_unit[index],
+                     'resource_name':task_resource_name[index],
+                     'resource_id':task_resource_id[index]
+                    }
             if task_types_names[index]:
-                r_data[task_types_names[index]].append([task_ids[index], task_names[index], task_statuses[index],
-                     task_percent_complete[index]])
+                r_data[task_types_names[index]].append(task)
             else:
-                r_data['nulls'].append(
-                    [task_ids[index], task_names[index], task_statuses[index],
-                     task_percent_complete[index]]
-                )
+                r_data['nulls'].append(task)
 
         return_data.append(r_data)
 
     shot_count = len(return_data)
     content_range = content_range % (0, shot_count - 1, shot_count)
 
+    logger.debug('get_shots ends ')
     resp = Response(
         json_body=return_data
     )
