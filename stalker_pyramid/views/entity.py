@@ -1021,7 +1021,7 @@ def delete_entity(request):
     renderer='json'
 )
 def get_entity_total_schedule_seconds(request):
-    """gives project's task total schedule_seconds
+    """gives entity's task total schedule_seconds
     """
     logger.debug('get_project_total_schedule_seconds starts')
     entity_id = request.matchdict.get('id')
@@ -1069,4 +1069,95 @@ def get_entity_total_schedule_seconds(request):
 
     logger.debug('get_project_total_schedule_seconds: %s' % result[0])
     return result[0]
+
+
+
+@view_config(
+    route_name='get_entity_task_min_start',
+    renderer='json'
+)
+def get_entity_task_min_start(request):
+    """gives entity's tasks min start date
+    """
+     
+    logger.debug('get_entity_task_min_start starts')
+    entity_id = request.matchdict.get('id')
+    entity = Entity.query.filter_by(id=entity_id).first()
+
+    sql_query = """select
+            min(extract(epoch from "Tasks".start::timestamp AT TIME ZONE 'UTC')) as start
+        from "Users"
+        join "Task_Resources" on "Task_Resources".resource_id = "Users".id
+        join "Tasks" on "Tasks".id = "Task_Resources".task_id
+
+    where not exists(select 1 from "Tasks" as t where t.parent_id = "Tasks".id)
+    %(where_conditions)s
+    """
+    where_conditions = ''
+
+    if entity.entity_type == 'Project':
+        where_conditions = """and "Tasks".project_id = %(project_id)s """ % {'project_id': entity_id}
+    elif entity.entity_type == 'User':
+        where_conditions = """and "Task_Resources".resource_id = %(resource_id)s """ % {'resource_id': entity_id}
+    elif entity.entity_type == 'Department':
+        temp_buffer = [""" and ("""]
+        for i, resource in enumerate(entity.users):
+            if i > 0:
+                temp_buffer.append(' or')
+            temp_buffer.append(""" "Task_Resources".resource_id='%s'""" % resource.id)
+        temp_buffer.append(' )')
+        where_conditions = ''.join(temp_buffer)
+
+    logger.debug('where_conditions: %s' % where_conditions)
+
+    sql_query = sql_query % {'where_conditions': where_conditions}
+
+    result = db.DBSession.connection().execute(sql_query).fetchone()
+
+    return result[0]
+
+@view_config(
+    route_name='get_entity_task_max_end',
+    renderer='json'
+)
+def get_entity_task_max_end(request):
+    """gives entity's tasks max end date
+    """
+     
+    logger.debug('get_entity_task_max_end starts')
+    entity_id = request.matchdict.get('id')
+    entity = Entity.query.filter_by(id=entity_id).first()
+
+    sql_query = """select
+            max(extract(epoch from "Tasks".end::timestamp AT TIME ZONE 'UTC')) as end
+        from "Users"
+        join "Task_Resources" on "Task_Resources".resource_id = "Users".id
+        join "Tasks" on "Tasks".id = "Task_Resources".task_id
+
+    where not exists(select 1 from "Tasks" as t where t.parent_id = "Tasks".id)
+    %(where_conditions)s
+    """
+    where_conditions = ''
+
+    if entity.entity_type == 'Project':
+        where_conditions = """and "Tasks".project_id = %(project_id)s """ % {'project_id': entity_id}
+    elif entity.entity_type == 'User':
+        where_conditions = """and "Task_Resources".resource_id = %(resource_id)s """ % {'resource_id': entity_id}
+    elif entity.entity_type == 'Department':
+        temp_buffer = [""" and ("""]
+        for i, resource in enumerate(entity.users):
+            if i > 0:
+                temp_buffer.append(' or')
+            temp_buffer.append(""" "Task_Resources".resource_id='%s'""" % resource.id)
+        temp_buffer.append(' )')
+        where_conditions = ''.join(temp_buffer)
+
+    logger.debug('where_conditions: %s' % where_conditions)
+
+    sql_query = sql_query % {'where_conditions': where_conditions}
+
+    result = db.DBSession.connection().execute(sql_query).fetchone()
+
+    return result[0]
+
 

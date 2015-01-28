@@ -394,7 +394,7 @@ def get_monthly_time_logs(request):
             join "Task_Resources" on "Tasks".id = "Task_Resources".task_id
             join "SimpleEntities" as "Resource_SimpleEntities" on "Task_Resources".resource_id = "Resource_SimpleEntities".id
             group by "Tasks".id
-        ) as resource_info on "Tasks".id = resource_info.task_id
+        ) as resource_info on "TimeLogs".task_id = resource_info.task_id
 
     %(where_clause)s
 

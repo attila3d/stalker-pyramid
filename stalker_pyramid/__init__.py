@@ -178,7 +178,9 @@ def main(global_config, **settings):
     config.add_route('get_entity_entities_out_stack',  'entities/{id}/{entities}/out_stack/' )
     config.add_route('get_entity_events',              'entities/{id}/events/')  #json
     config.add_route('get_entity_notes',               'entities/{id}/notes/') #json
-
+    config.add_route('get_entity_task_min_start',      'entities/{id}/task_min_start/') #json
+    config.add_route('get_entity_task_max_end',        'entities/{id}/task_max_end/') #json
+    
     config.add_route('list_entity_users',              'entities/{id}/users/list')
     config.add_route('list_entity_departments',        'entities/{id}/departments/list')  # html
     config.add_route('list_entity_groups',             'entities/{id}/groups/list')  # html
