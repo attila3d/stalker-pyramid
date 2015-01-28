@@ -17,8 +17,11 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
+
+
 import time
 import datetime
+from beaker.cache import cache_region
 
 from pyramid.httpexceptions import (HTTPFound, HTTPServerError)
 from pyramid.response import Response
@@ -40,6 +43,74 @@ import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+@cache_region('long_term', 'load_users')
+def cached_group_finder(login_name):
+    if ':' in login_name:
+        login_name = login_name.split(':')[1]
+
+    # return the group of the given User object
+    user_obj = User.query.filter_by(login=login_name).first()
+    if user_obj:
+        # just return the groups names if there is any group
+        groups = user_obj.groups
+        if len(groups):
+            return map(lambda x: 'Group:' + x.name, groups)
+    return []
+
+
+def group_finder(login_name, request):
+    """Returns the group of the given login name. The login name will be in
+    'User:{login}' format.
+
+    :param login_name: The login name of the user, both '{login_name}' and
+      'User:{login_name}' format is accepted.
+
+    :param request: The Request object
+
+    :return: Will return the groups of the user in ['Group:{group_name}']
+      format.
+    """
+    return cached_group_finder(login_name)
+
+
+class RootFactory(object):
+    """The main purpose of having a root factory is to generate the objects
+    used as the context by the request. But in our case it just used to
+    determine the default ACLs.
+    """
+
+    @property
+    def __acl__(self):
+        # create the default acl and give admins all the permissions
+        all_permissions = map(
+            lambda x: x.action + '_' + x.class_name,
+            Permission.query.all()
+        )
+
+        # start with default ACLs
+
+        ACLs = [
+            ('Allow', 'Group:' + defaults.admin_department_name,
+             all_permissions),
+            ('Allow', 'User:' + defaults.admin_name, all_permissions)
+        ]
+
+        # get all users and their ACLs
+        all_users = User.query.all()
+        for user in all_users:
+            ACLs.extend(user.__acl__)
+
+        # get all groups and their ACLs
+        all_groups = Group.query.all()
+        for group in all_groups:
+            ACLs.extend(group.__acl__)
+
+        return ACLs
+
+    def __init__(self, request):
+        pass
 
 
 @view_config(
@@ -65,7 +136,6 @@ def create_user(request):
     logger.debug('new user login : %s' % login)
     logger.debug('new user email : %s' % email)
     logger.debug('new user password : %s' % password)
-
 
     # create and add a new user
     if name and login and email and password:
@@ -124,7 +194,7 @@ def create_user(request):
             # request.session.flash('error:' + e.message)
             # HTTPFound(location=came_from)
             transaction.abort()
-            return Response('BaseException: %s'%e.message, 500)
+            return Response('BaseException: %s' % e, 500)
     else:
         logger.debug('not all parameters are in request.params')
         log_param(request, 'name')
@@ -132,13 +202,7 @@ def create_user(request):
         log_param(request, 'email')
         log_param(request, 'password')
 
-        response = Response('There are missing parameters: ')
-        response.status_int = 500
-        return response
-
-    response = Response('User created successfully')
-    response.status_int = 200
-    return response
+        return Response('There are missing parameters: ', 500)
 
 
 @view_config(
@@ -259,7 +323,6 @@ def get_users_count(request):
         # there is no entity_type for that entity
         return []
 
-    start = time.time()
     sql_query = """select
         count("Users".id)
     from "SimpleEntities"
@@ -269,19 +332,19 @@ def get_users_count(request):
             uid,
             array_agg(did) as dep_ids,
             array_agg(name) as dep_names
-        from "User_Departments"
-        join "SimpleEntities" on "User_Departments".did = "SimpleEntities".id
+        from "Department_Users"
+        join "SimpleEntities" on "Department_Users".did = "SimpleEntities".id
         group by uid
-    ) as user_departments on user_departments.uid = "Users".id
+    ) as department_Users on department_Users.uid = "Users".id
     left outer join (
         select
             uid,
             array_agg(gid) as group_ids,
             array_agg(name) as group_names
-        from "User_Groups"
-        join "SimpleEntities" on "User_Groups".gid = "SimpleEntities".id
+        from "Group_Users"
+        join "SimpleEntities" on "Group_Users".gid = "SimpleEntities".id
         group by uid
-    ) as user_groups on user_groups.uid = "Users".id
+    ) as group_users on group_users.uid = "Users".id
     left outer join (
         select resource_id, count(task_id) as task_count from "Task_Resources" group by resource_id
     ) as tasks on tasks.resource_id = "Users".id
@@ -302,12 +365,12 @@ def get_users_count(request):
         where "Project_Users".project_id = %(id)s
         """ % {'id': entity_id}
     elif entity_type == "Department":
-        sql_query += """join "User_Departments" on "Users".id = "User_Departments".uid
-        where "User_Departments".did = %(id)s
+        sql_query += """join "Department_Users" on "Users".id = "Department_Users".uid
+        where "Department_Users".did = %(id)s
         """ % {'id': entity_id}
     elif entity_type == "Group":
-        sql_query += """join "User_Groups" on "Users".id = "User_Groups".uid
-        where "User_Groups".gid = %(id)s
+        sql_query += """join "Group_Users" on "Users".id = "Group_Users".uid
+        where "Group_Users".gid = %(id)s
         """ % {'id': entity_id}
     elif entity_type == "Task":
         sql_query += """join "Task_Resources" on "Users".id = "Task_Resources".resource_id
@@ -330,11 +393,6 @@ def get_users_count(request):
     permission='List_User'
 )
 @view_config(
-    route_name='get_users',
-    renderer='json',
-    permission='List_User'
-)
-@view_config(
     route_name='get_user',
     renderer='json',
     permission='Read_User'
@@ -342,20 +400,18 @@ def get_users_count(request):
 def get_users(request):
     """returns all users or one particular user from database
     """
-    # if there is a simple flag, just return ids and names and login
-    #simple = request.params.get('simple')
+    start = time.time()
 
     # if there is an id it is probably a project
     entity_id = request.matchdict.get('id')
 
     entity_type = None
 
+    has_permission = PermissionChecker(request)
+    has_update_user_permission = has_permission('Update_User')
+    has_delete_user_permission = has_permission('Delete_User')
 
-    update_user_permission = PermissionChecker(request)('Update_User')
-    delete_user_permission = PermissionChecker(request)('Delete_User')
-
-    delete_user_action ='/users/%(id)s/delete/dialog'
-
+    delete_user_action = '/users/%(id)s/delete/dialog'
 
     if entity_id:
         sql_query = \
@@ -371,16 +427,15 @@ def get_users(request):
         # there is no entity_type for that entity
         return []
 
-    start = time.time()
     sql_query = """select
         "Users".id,
         "SimpleEntities".name,
         "Users".login,
         "Users".email,
-        user_departments."dep_ids",
-        user_departments."dep_names",
-        user_groups."group_ids",
-        user_groups."group_names",
+        department_users."dep_ids",
+        department_users."dep_names",
+        group_users."group_ids",
+        group_users."group_names",
         tasks.task_count,
         tickets.ticket_count,
         "Links".full_path
@@ -391,19 +446,19 @@ def get_users(request):
             uid,
             array_agg(did) as dep_ids,
             array_agg(name) as dep_names
-        from "User_Departments"
-        join "SimpleEntities" on "User_Departments".did = "SimpleEntities".id
+        from "Department_Users"
+        join "SimpleEntities" on "Department_Users".did = "SimpleEntities".id
         group by uid
-    ) as user_departments on user_departments.uid = "Users".id
+    ) as department_users on department_users.uid = "Users".id
     left outer join (
         select
             uid,
             array_agg(gid) as group_ids,
             array_agg(name) as group_names
-        from "User_Groups"
-        join "SimpleEntities" on "User_Groups".gid = "SimpleEntities".id
+        from "Group_Users"
+        join "SimpleEntities" on "Group_Users".gid = "SimpleEntities".id
         group by uid
-    ) as user_groups on user_groups.uid = "Users".id
+    ) as group_users on group_users.uid = "Users".id
     left outer join (
         select resource_id, count(task_id) as task_count from "Task_Resources" group by resource_id
     ) as tasks on tasks.resource_id = "Users".id
@@ -424,12 +479,12 @@ def get_users(request):
         where "Project_Users".project_id = %(id)s
         """ % {'id': entity_id}
     elif entity_type == "Department":
-        sql_query += """join "User_Departments" on "Users".id = "User_Departments".uid
-        where "User_Departments".did = %(id)s
+        sql_query += """join "Department_Users" on "Users".id = "Department_Users".uid
+        where "Department_Users".did = %(id)s
         """ % {'id': entity_id}
     elif entity_type == "Group":
-        sql_query += """join "User_Groups" on "Users".id = "User_Groups".uid
-        where "User_Groups".gid = %(id)s
+        sql_query += """join "Group_Users" on "Users".id = "Group_Users".uid
+        where "Group_Users".gid = %(id)s
         """ % {'id': entity_id}
     elif entity_type == "Task":
         sql_query += """join "Task_Resources" on "Users".id = "Task_Resources".resource_id
@@ -462,8 +517,11 @@ def get_users(request):
             'tasksCount': r[8] or 0,
             'ticketsCount': r[9] or 0,
             'thumbnail_full_path': r[10] if r[10] else None,
-            'update_user_action':'/users/%s/update/dialog' % r[0] if update_user_permission else None,
-            'delete_user_action':delete_user_action % {'id':r[0],'entity_id':entity_id} if delete_user_permission else None
+            'update_user_action':'/users/%s/update/dialog' % r[0]
+            if has_update_user_permission else None,
+            'delete_user_action':delete_user_action % {
+                'id': r[0], 'entity_id': entity_id
+            } if has_delete_user_permission else None
         } for r in result.fetchall()
     ]
 
@@ -472,6 +530,94 @@ def get_users(request):
                  ((end - start), len(data)))
     return data
 
+
+@view_config(
+    route_name='get_users',
+    renderer='json',
+    permission='List_User'
+)
+def get_users_simple(request):
+    """simply return the users without dealing a lot of other details
+    """
+    start = time.time()
+    sql_query = """select
+        "Users".id,
+        "SimpleEntities".name,
+        "Users".login,
+        "Users".email,
+        department_users."dep_ids",
+        department_users."dep_names",
+        group_users."group_ids",
+        group_users."group_names",
+        tasks.task_count,
+        tickets.ticket_count,
+        "Links".full_path
+    from "SimpleEntities"
+    join "Users" on "SimpleEntities".id = "Users".id
+    left outer join (
+        select
+            uid,
+            array_agg(did) as dep_ids,
+            array_agg(name) as dep_names
+        from "Department_Users"
+        join "SimpleEntities" on "Department_Users".did = "SimpleEntities".id
+        group by uid
+    ) as department_users on department_users.uid = "Users".id
+    left outer join (
+        select
+            uid,
+            array_agg(gid) as group_ids,
+            array_agg(name) as group_names
+        from "Group_Users"
+        join "SimpleEntities" on "Group_Users".gid = "SimpleEntities".id
+        group by uid
+    ) as group_users on group_users.uid = "Users".id
+    left outer join (
+        select resource_id, count(task_id) as task_count from "Task_Resources" group by resource_id
+    ) as tasks on tasks.resource_id = "Users".id
+    left outer join (
+        select
+            owner_id,
+            count("Tickets".id) as ticket_count
+        from "Tickets"
+        join "SimpleEntities" on "Tickets".status_id = "SimpleEntities".id
+        where "SimpleEntities".name = 'New'
+        group by owner_id, name
+    ) as tickets on tickets.owner_id = "Users".id
+    left outer join "Links" on "SimpleEntities".thumbnail_id = "Links".id
+    """
+
+    result = DBSession.connection().execute(sql_query)
+    data = [
+        {
+            'id': r[0],
+            'name': r[1],
+            'login': r[2],
+            'email': r[3],
+            'departments': [
+                {
+                    'id': r[4][i],
+                    'name': r[5][i]
+                } for i, a in enumerate(r[4])
+            ] if r[4] else [],
+            'groups': [
+                {
+                    'id': r[6],
+                    'name': r[7]
+                } for i in range(len(r[6]))
+            ] if r[6] else [],
+            'tasksCount': r[8] or 0,
+            'ticketsCount': r[9] or 0,
+            'thumbnail_full_path': r[10] if r[10] else None,
+            'update_user_action': '/users/%s/update/dialog' % r[0],
+            'delete_user_action': '/users/%s/delete/dialog' % r[0],
+        } for r in result.fetchall()
+    ]
+
+    end = time.time()
+    logger.debug('get_users_simple took : %s seconds for %s rows' %
+                 ((end - start), len(data)))
+    return data
 
 
 def get_permissions_from_multi_dict(multi_dict):
@@ -505,8 +651,8 @@ def get_permissions_from_multi_dict(multi_dict):
         else:
 
             if access in ['Allow', 'Deny'] and \
-                            class_name in all_class_names and \
-                            action in all_actions:
+               class_name in all_class_names and \
+               action in all_actions:
 
                 # get permissions
                 permission = Permission.query \
@@ -551,20 +697,21 @@ def login(request):
 
     came_from = request.params.get('came_from', referrer)
 
-    login = request.params.get('login', '')
+    login_name = request.params.get('login', '')
     password = request.params.get('password', '')
     has_error = False
 
     if 'submit' in request.params:
         # get the user again (first got it in validation)
         user_obj = User.query \
-            .filter(or_(User.login == login, User.email == login)).first()
+            .filter(or_(User.login == login_name, User.email == login_name))\
+            .first()
 
         if user_obj:
-            login = user_obj.login
+            login_name = user_obj.login
 
         if user_obj and user_obj.check_password(password):
-            headers = remember(request, login)
+            headers = remember(request, login_name)
             # form submission succeeded
             return HTTPFound(
                 location=came_from,
@@ -574,7 +721,7 @@ def login(request):
             has_error = True
 
     return {
-        'login': login,
+        'login': login_name,
         'password': password,
         'has_error': has_error,
         'came_from': came_from
@@ -621,12 +768,12 @@ def home(request):
 def check_login_availability(request):
     """checks it the given login is available
     """
-    login = request.matchdict['login']
-    logger.debug('checking availability for: %s' % login)
+    login_name = request.matchdict['login']
+    logger.debug('checking availability for: %s' % login_name)
 
     available = 1
-    if login:
-        user = User.query.filter(User.login == login).first()
+    if login_name:
+        user = User.query.filter(User.login == login_name).first()
         if user:
             available = 0
 
@@ -676,6 +823,8 @@ def get_resources(request):
     """
     # TODO: This is a very ugly function, please define the borders and use cases correctly and then clean it
 
+    from stalker_pyramid.views.task import generate_recursive_task_query
+
     start = time.time()
     # return users for now
     # /resources/
@@ -711,7 +860,7 @@ def get_resources(request):
                 "SimpleEntities".entity_type,
                 count(*) as resource_count
             from "SimpleEntities"
-            join "User_Departments" on "User_Departments".did = "SimpleEntities".id
+            join "Department_Users" on "Department_Users".did = "SimpleEntities".id
             where "SimpleEntities".entity_type = '%s'
             """ % entity_type
         elif entity_type == 'User':
@@ -730,7 +879,7 @@ def get_resources(request):
                 "SimpleEntities".entity_type,
                 count(*) as resource_count
             from "SimpleEntities"
-            join "User_Departments" on "User_Departments".did = "SimpleEntities".id
+            join "Department_Users" on "Department_Users".did = "SimpleEntities".id
             """
 
         if resource_id and entity_type not in ["Studio", "Project"]:
@@ -749,52 +898,53 @@ def get_resources(request):
         """
 
         tasks_query = """select
-            "Tasks".id,
+            tasks.id,
+            tasks.full_path,
             extract(epoch from "Tasks".computed_start::timestamp AT TIME ZONE 'UTC') * 1000 as start,
             extract(epoch from "Tasks".computed_end::timestamp AT TIME ZONE 'UTC') * 1000 as end
-        from "Tasks"
-        """
+        -- start with tasks (with full names)
+        from (
+            %(recursive_task_query)s
+        ) as tasks
+            join "Tasks" on tasks.id = "Tasks".id
+        """ % {
+            'recursive_task_query':
+            generate_recursive_task_query(ordered=False)
+        }
 
         has_children = False
 
         if entity_type == "User":
-            time_log_query += "where resource_id = %s"
+            time_log_query += "where resource_id = %(id)s"
 
             tasks_query += """join "Task_Resources" on "Tasks".id = "Task_Resources".task_id
-                where not (
-                    exists (
-                        select 1
-                        from (
-                            select "Tasks".parent_id
-                            from "SimpleEntities"
-                                join "Tasks" on "SimpleEntities".id = "Tasks".id
-                            ) AS all_tasks
-                        where all_tasks.parent_id = "Tasks".id
-                    )
-                ) and resource_id = %s
+            where not (
+                exists (
+                    select 1
+                    from "Tasks"
+                    where "Tasks".parent_id = tasks.id
+                )
+            ) and resource_id = %(id)s
             """
 
             has_children = False
         elif entity_type in ["Department", "Studio"]:
             time_log_query += """
-            join "User_Departments" on "User_Departments".uid = "TimeLogs".resource_id
-            where did = %s"""
+            join "Department_Users" on "Department_Users".uid = "TimeLogs".resource_id
+            where did = %(id)s"""
 
             tasks_query += """join "Task_Resources" on "Tasks".id = "Task_Resources".task_id
-            join "User_Departments" on "Task_Resources".resource_id = "User_Departments".uid
+            join "Department_Users" on "Task_Resources".resource_id = "Department_Users".uid
+            join "SimpleEntities" as "Task_SimpleEntities" on "Tasks".id = "Task_SimpleEntities".id
             where not (
                 exists (
                     select 1
-                    from (
-                        select "Tasks".parent_id
-                        from "SimpleEntities"
-                            join "Tasks" on "SimpleEntities".id = "Tasks".id
-                        ) AS all_tasks
-                    where all_tasks.parent_id = "Tasks".id
+                    from "Tasks"
+                    where "Tasks".parent_id = tasks.id
                 )
             )
-            and did = %s
-            group by "Tasks".id, "Tasks".start, "Tasks".end, "Tasks".computed_start, "Tasks".computed_end
+            and did = %(id)s
+            group by tasks.id, tasks.full_path, "Tasks".start, "Tasks".end, "Tasks".computed_start, "Tasks".computed_end
             order by start
             """
 
@@ -803,29 +953,41 @@ def get_resources(request):
             # the resource is a Project return all the project tasks and
             # return all the time logs of the users in that project
             time_log_query += """
-            join "User_Departments" on "User_Departments".uid = "TimeLogs".resource_id
-            -- where did = %s
+            join "Project_Users" on "Project_Users".user_id = "TimeLogs".resource_id
+            -- where did = %(id)s
             """
 
-            tasks_query += """
-            -- select all the leaf tasks of the users of a specific Project
-            select
-                "Tasks".id,
-                extract(epoch from "Tasks".computed_start::timestamp AT TIME ZONE 'UTC') * 1000 as start,
-                extract(epoch from "Tasks".computed_end::timestamp AT TIME ZONE 'UTC') * 1000 as end
-            from "Tasks"
-                where not (
-                    exists (
-                        select 1
-                        from (
-                            select "Tasks".parent_id
-                            from "SimpleEntities"
-                                join "Tasks" on "SimpleEntities".id = "Tasks".id
-                            ) AS all_tasks
-                        where all_tasks.parent_id = "Tasks".id
-                    )
-                ) and project_id = %s
-            group by id, start, "end", "Tasks".computed_start, "Tasks".computed_end
+            # tasks_query += """
+            # -- select all the leaf tasks of the users of a specific Project
+            # select
+            #     "Tasks".id,
+            #     "Task_SimpleEntities".name,
+            #     extract(epoch from "Tasks".computed_start::timestamp AT TIME ZONE 'UTC') * 1000 as start,
+            #     extract(epoch from "Tasks".computed_end::timestamp AT TIME ZONE 'UTC') * 1000 as end
+            # from "Tasks"
+            #     join "SimpleEntities" as "Task_SimpleEntities" on "Tasks".id = "Task_SimpleEntities".id
+            #     where not (
+            #         exists (
+            #             select 1
+            #             from "Tasks"
+            #             where "Tasks".parent_id = tasks.id
+            #         )
+            #     ) and project_id = %(id)s
+            # group by id, "Task_SimpleEntities".name, start, "end", "Tasks".computed_start, "Tasks".computed_end
+            # order by start
+            # """
+            tasks_query += """join "Task_Resources" on "Tasks".id = "Task_Resources".task_id
+            join "Project_Users" on "Project_Users".user_id = "Task_Resources".resource_id
+            join "SimpleEntities" as "Task_SimpleEntities" on "Tasks".id = "Task_SimpleEntities".id
+            where not (
+                exists (
+                    select 1
+                    from "Tasks"
+                    where "Tasks".parent_id = tasks.id
+                )
+            )
+            and "Project_Users".project_id = %(id)s
+            group by tasks.id, tasks.full_path, "Tasks".start, "Tasks".end, "Tasks".computed_start, "Tasks".computed_end
             order by start
             """
 
@@ -841,11 +1003,11 @@ def get_resources(request):
             1 as resource_count
         from "Users"
         join "SimpleEntities" on "SimpleEntities".id = "Users".id
-        join "User_Departments" on "User_Departments".uid = "Users".id
-        join "Departments" on "User_Departments".did = "Departments".id
-        where "Departments".id = %s
+        join "Department_Users" on "Department_Users".uid = "Users".id
+        join "Departments" on "Department_Users".did = "Departments".id
+        where "Departments".id = %(id)s
         order by name
-        """ % parent_id
+        """ % {'id': parent_id}
 
         time_log_query = """select
             "TimeLogs".id,
@@ -853,38 +1015,38 @@ def get_resources(request):
             extract(epoch from "TimeLogs".start::timestamp AT TIME ZONE 'UTC') * 1000 as start,
             extract(epoch from "TimeLogs".end::timestamp AT TIME ZONE 'UTC') * 1000 as end
         from "TimeLogs"
-        where resource_id = %s
+        where resource_id = %(id)s
         """
 
         tasks_query = """select
-            "Tasks".id,
+            tasks.id,
+            tasks.full_path,
             extract(epoch from "Tasks".computed_start::timestamp AT TIME ZONE 'UTC') * 1000 as start,
             extract(epoch from "Tasks".computed_end::timestamp AT TIME ZONE 'UTC') * 1000 as end
-        from "Tasks"
-            join "Task_Resources" on "Tasks".id = "Task_Resources".task_id
+        from (
+            %(recursive_task_query)s
+        ) as tasks
+            join "Tasks" on tasks.id = "Tasks".id
+            join "Task_Resources" on tasks.id = "Task_Resources".task_id
         where
             not (
                 exists (
                     select 1
-                    from (
-                        select "Tasks".parent_id
-                        from "SimpleEntities"
-                            join "Tasks" on "SimpleEntities".id = "Tasks".id
-                        ) AS all_tasks
-                    where all_tasks.parent_id = "Tasks".id
+                    from "Tasks"
+                    where "Tasks".parent_id = tasks.id
                 )
-            ) and resource_id = %s
+            ) and resource_id = %(id)s
         """
 
         has_children = False
 
-    logger.debug('resource_sql_query : %s' % resource_sql_query)
-    logger.debug('time_log_query : %s' % time_log_query)
-    logger.debug('tasks_sql_query : %s' % tasks_query)
+    # logger.debug('resource_sql_query : %s' % resource_sql_query)
+    # logger.debug('time_log_query : %s' % time_log_query)
+    # logger.debug('tasks_sql_query : %s' % tasks_query)
 
     resources_result = execute(resource_sql_query).fetchall()
 
-    logger.debug('resources_result : %s' % resources_result)
+    # logger.debug('resources_result : %s' % resources_result)
 
     link = '/%s/%s/view' % (entity_type.lower(), '%s')
     data = [
@@ -901,14 +1063,24 @@ def get_resources(request):
                     'task_id': tr[1],
                     'start': tr[2],
                     'end': tr[3]
-                } for tr in execute(time_log_query % rr[0]).fetchall()
+                } for tr in execute(
+                    time_log_query % {
+                        'id': rr[0]
+                    }).fetchall()
             ],
             'tasks': [
                 {
                     'id': tr[0],
-                    'start': tr[1],
-                    'end': tr[2]
-                } for tr in execute(tasks_query % rr[0]).fetchall()
+                    'name': tr[1],
+                    'start': tr[2],
+                    'end': tr[3]
+                } for tr in execute(
+                    tasks_query % {
+                        'recursive_task_query':
+                            generate_recursive_task_query(False),
+                        'id': rr[0]
+                    }
+                ).fetchall()
             ]
         } for rr in resources_result
     ]
@@ -939,18 +1111,19 @@ def delete_user_dialog(request):
     user = User.query.get(user_id)
 
     came_from = request.params.get('came_from', request.current_route_path())
-    action = '/users/%s/delete?came_from=%s'% (user_id,came_from)
+    action = '/users/%s/delete?came_from=%s' % (user_id, came_from)
 
-
-    message = 'Are you sure you want to <strong>delete User %s </strong>?'% (user.name)
+    message = \
+        'Are you sure you want to ' \
+        '<strong>delete User %s </strong>?' % user.name
 
     logger.debug('action: %s' % action)
 
     return {
-            'came_from': came_from,
-            'message': message,
-            'action': action
-        }
+        'came_from': came_from,
+        'message': message,
+        'action': action
+    }
 
 
 @view_config(

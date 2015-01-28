@@ -89,7 +89,7 @@ class StdErrToHTMLConverter():
 
     def __init__(self, error):
         if isinstance(error, Exception):
-            self.error_message = error.message
+            self.error_message = str(error)
         else:
             self.error_message = error
 
@@ -97,7 +97,7 @@ class StdErrToHTMLConverter():
         """replaces tjp ids in error messages with proper links
         """
         import re
-        pattern = r"Project[\w0-9\._]+[0-9]"
+        pattern = r"Task[\w0-9\._]+[0-9]"
 
         all_tjp_ids = re.findall(pattern, message)
         new_message = message
@@ -335,6 +335,23 @@ def get_user_os(request):
         return 'osx'
 
 
+def get_path_converter(request, task):
+
+    user_os = get_user_os(request)
+    repo = task.project.repository
+
+    path_converter = lambda x: x
+
+    if user_os == 'windows':
+        path_converter = repo.to_windows_path
+    elif user_os == 'linux':
+        path_converter = repo.to_linux_path
+    elif user_os == 'osx':
+        path_converter = repo.to_osx_path
+
+    return path_converter
+
+
 def seconds_since_epoch(dt):
     """converts the given datetime.datetime instance to an integer showing the
     seconds from epoch, and does it without using the strftime('%s') which
@@ -373,3 +390,65 @@ def from_milliseconds(t):
     instance
     """
     return from_microseconds(t * 1000)
+
+
+def get_parent_task_status(children_statuses):
+
+    binary_status_codes = {
+        'WFD':  256,
+        'RTS':  128,
+        'WIP':  64,
+        'PREV': 32,
+        'HREV': 16,
+        'DREV': 8,
+        'OH':   4,
+        'STOP': 2,
+        'CMPL': 1
+    }
+
+    children_to_parent_statuses_lut = [
+        0, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 2, 0, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+        2, 2, 2, 2, 2, 2
+    ]
+
+    parent_statuses_lut = ['WFD', 'RTS', 'WIP', 'CMPL']
+
+    binary_status = 0
+    for child_status_code in children_statuses:
+        binary_status += binary_status_codes[child_status_code]
+
+    status_index = children_to_parent_statuses_lut[binary_status]
+    status = parent_statuses_lut[status_index]
+
+    return status
+
+
+def invalidate_all_caches():
+    """invalidates all cache values.
+    Based on: http://stackoverflow.com/a/14251064/3259351
+    """
+    from beaker.cache import cache_managers
+    for _cache in cache_managers.values():
+        _cache.clear()

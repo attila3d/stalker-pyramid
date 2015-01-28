@@ -49,11 +49,11 @@
                     class="btn btn-small btn-purple tooltip-success"
                     data-rel="tooltip"
                     data-placement="bottom"
-                    title="Review Task"
+                    title="Request Revision Task"
                     data-target="#dialog_template"
                     data-toggle="modal"
                     data-keyboard="false"
-                    href='/tasks/{{ task.id }}/review/dialog?came_from={{ request.current_route_path() }}&review_mode=request_revision'
+                    href='/tasks/{{ task.id }}/review/dialog?came_from={{ request.current_route_path() }}&review_mode=request_revision&forced=1'
                     >
                 <i class="icon-comments"></i>
             </button>
@@ -103,29 +103,14 @@
 
 <script type="text/javascript">
     $(function () {
-        $.getJSON('/entities/{{ task.id }}/references/count/').then(function (data) {
-            $('#reference_count').text(data);
-
-            menu_of(
-                'References',
-                "{%- if request.current_route_path() == request.route_path('list_task_references', id=task.id) -%} 'active', {%- else -%},{%- endif -%}",
-                '{{ request.route_url('list_task_references', id=task.id) }}',
-                get_icon('reference'),
-                data
-            )
-        });
-    });
-</script>
-
-<script type="text/javascript">
-    $(document).ready(function () {
+        //$('#reference_count').text(data);
         menu_of(
             'Dashboard',
             "{%- if request.current_route_path() == request.route_path('view_task', id=task.id) -%}'active',{%- else -%},{%- endif -%}",
             '{{ request.route_url('view_task', id=task.id) }}',
             get_icon('dashboard'),
-            ''
-        )
+            0
+        );
 
         {% if entity.entity_type == 'Sequence' %}
             menu_of(
@@ -133,8 +118,14 @@
                 "{%- if request.current_route_path() == request.route_path('list_sequence_shots', id=task.id) -%}'active',{%- else -%},{%- endif -%}",
                 '{{ request.route_url('list_sequence_shots', id=task.id) }}',
                 get_icon('shot'),
-                ''
-            )
+                '/entities/{{ task.id }}/shots/count/'
+            );
+            menu_of('Scenes',
+                "{%- if request.current_route_path() == request.route_path('list_entity_scenes', id=task.id) -%}'active',{%- else -%},{%- endif -%}",
+                '{{ request.route_url('list_entity_scenes', id=task.id) }}',
+                get_icon('shot'),
+                0
+            );
         {% endif %}
 
         menu_of(
@@ -142,7 +133,7 @@
             "{%- if request.current_route_path() == request.route_path('list_entity_tasks', id=task.id) -%}'active',{%- else -%},{%- endif -%}",
             '{{ request.route_url('list_entity_tasks', id=task.id) }}',
             get_icon('task'),
-            '{{ task.tasks | count }}'
+            {{ task.tasks | count }}
         );
 
         menu_of(
@@ -150,28 +141,44 @@
             "{%- if request.current_route_path() == request.route_path('list_task_tickets', id=task.id) -%}'active',{%- else -%},{%- endif -%}",
             '{{ request.route_url('list_task_tickets', id=task.id) }}',
             get_icon('ticket'),
-            ''
-            {# TODO: fix this, it should be task.open_tickets, but stalker doesn't support it yet #}
+            0 {# TODO: fix this, it should be task.open_tickets, but stalker doesn't support it yet #}
+        );
+
+        {% if task.is_leaf %}
+
+            menu_of(
+                'Versions',
+                "{%- if request.current_route_path() == request.route_path('list_task_versions', id=task.id) -%}'active',{%- else -%},{%- endif -%}",
+                '{{ request.route_url('list_task_versions', id=task.id) }}',
+                get_icon('version'),
+                {{ task.versions | count }}
+            );
+
+            menu_of(
+                'Outputs',
+                "{%- if request.current_route_path() == request.route_path('list_task_outputs', id=task.id) -%}'active',{%- else -%},{%- endif -%}",
+                '{{ request.route_url('list_task_outputs', id=task.id) }}',
+                get_icon('version_output'),
+                '/tasks/{{ task.id }}/outputs/count/'
+            );
+
+        {% endif %}
+
+        menu_of(
+            'References',
+            "{%- if request.current_route_path() == request.route_path('list_task_references', id=task.id) -%} 'active', {%- else -%},{%- endif -%}",
+            '{{ request.route_url('list_task_references', id=task.id) }}',
+            get_icon('reference'),
+            '/entities/{{ task.id }}/references/count/'
         );
 
         menu_of(
-            'Versions',
-            "{%- if request.current_route_path() == request.route_path('list_task_versions', id=task.id) -%}'active',{%- else -%},{%- endif -%}",
-            '{{ request.route_url('list_task_versions', id=task.id) }}',
-            get_icon('version'),
-            '{{ task.versions | count }}'
+            'Reviews',
+            "{%- if request.current_route_path() == request.route_path('list_task_reviews', id=task.id) -%}'active',{%- else -%},{%- endif -%}",
+            '{{ request.route_url('list_task_reviews', id=task.id) }}',
+            get_icon('review'),
+            '/tasks/{{ task.id }}/reviews/count/'
         );
-
-
-        $.getJSON('/tasks/{{ task.id }}/reviews/count/').then(function (data) {
-            menu_of(
-                'Reviews',
-                "{%- if request.current_route_path() == request.route_path('list_task_reviews', id=task.id) -%}'active',{%- else -%},{%- endif -%}",
-                '{{ request.route_url('list_task_reviews', id=task.id) }}',
-                get_icon('review'),
-                data
-            )
-        });
 
         $('#delete_task_button').on('click', function (e) {
             e.preventDefault();
@@ -184,19 +191,23 @@
                     'created for those tasks are going to be deleted.<br><br>' +
                     'Are you sure?', function (result) {
                 if (result) {
-                    var id;
+                    var id, parent_id;
                     // TODO: users will probably select parent and child items
                     // together and server will not be able to find the child tasks
                     // after the parent has deleted, so consider that in server
                     // side.
 
                     id = '{{ task.id }}';
+                    var new_url;
+                    {% if task.parent %}
+                        new_url = '/tasks/{{ task.parent.id }}/view';
+                    {% else %}
+                        new_url = '/projects/{{ task.project.id }}/view';
+                    {% endif %}
                     $.post(
                         '/tasks/' + id + '/delete'
                     ).done(function (response_text) {
-                        //bootbox.alert(response_text);
-                        window.location.assign('/projects/{{ task.project.id }}/view');
-                        // reload the gantt chart
+                        window.location.assign(new_url);
                     }).fail(function (jqXHR) {
                         bootbox.alert(jqXHR.responseText);
                     });

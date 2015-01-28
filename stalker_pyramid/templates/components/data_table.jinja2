@@ -3,8 +3,8 @@
         <h5 id="items_header" class="smaller"></h5>
 
         <div class="widget-toolbar">
-            {% if has_permission('Create_'+list_item_type) and  add_button_address %}
-
+{#            {% if has_permission('Create_'+list_item_type) and  add_button_address %}#}
+                {% if add_button_address %}
                 &nbsp
                 <a data-target="#dialog_template"
                    data-toggle="modal"
@@ -62,20 +62,17 @@
 
 
 <script>
-    $(document).ready(function () {
+    $(function () {
 
         var icon_name = get_icon('{{ list_item_type.lower() }}');
-        $('#items_header').append('<i class="' + icon_name + ' bigger-125"></i>');
+        $('#items_header').append('<i class="' + icon_name + ' bigger-125"></i> {{ list_item_type }}s');
 
         {% if collapsed %}
-            $('#items_header').append('<small class="white">List of {{ list_item_type }}s</small>')
+            $('#items_header').append('<small class="white">List of {{ list_item_type }}s</small>');
         {% endif %}
 
-
-
-        var loadTableData = function (address, tableId,tableParams,sortingParams) {
-
-            console.log('loadTableData' + address)
+        var loadTableData = function (address, tableId, tableParams, sortingParams) {
+{#            console.log('loadTableData' + address);#}
             // fill items table with dynamic data
             $.getJSON(address).then(function (data) {
 
@@ -86,22 +83,17 @@
                 var items = data;
                 var row_template = doT.template($('#tmpl_itemRow').html());
 
-                console.log('data loded' + address)
-
-
+{#                console.log('data loded' + address);#}
                 // wait until document is ready
                 $(function () {
-
                     var i;
                     var table_body = $('#' + tableId + '>tbody');
                     for (i = 0; i < data.length; i++) {
 
-
                         if (data[i].date_created) {
                             data[i].date_created = new Date(data[i].date_created).format('yyyy-mm-dd HH:MM');
                         }
-
-                         console.log('data loded' + data[i].thumbnail_full_path)
+{#                        console.log('data loaded' + data[i].thumbnail_full_path);#}
 
                         if (data[i].thumbnail_full_path == null) {
                             data[i].thumbnail_full_path = '{{ request.static_url("stalker_pyramid:static/stalker/images/T_NO_IMAGE.gif") }}';
@@ -109,28 +101,29 @@
                         else {
                             data[i].thumbnail_full_path = '/' + data[i].thumbnail_full_path;
                         }
+{#                        console.log('data loaded' + data[i].thumbnail_full_path);#}
 
-                        console.log('data loded' + data[i].thumbnail_full_path)
-
-                        data[i].came_from = '{{ request.current_route_path() }}'
+                        data[i].came_from = '{{ request.current_route_path() }}';
 
                         // append it to the table
                         table_body.append(row_template(data[i]));
                     }
 
-                    var oTable1 = $('#' + tableId).dataTable(tableParams);
+                    var table_object = $('#' + tableId);
+                    var oTable1 = table_object.dataTable(tableParams);
                     oTable1.fnSort(sortingParams);
 
-                    $('#' + tableId).show();
+                    table_object.show();
                     $('#loading_spinner').hide();
                 });
             });
-        }
+        };
 
         loadTableData(
-                tableDataAddress,
-                "items_table",
-                tableParameters,
-                sortingParameters);
+            tableDataAddress,
+            "items_table",
+            tableParameters,
+            sortingParameters
+        );
     });
 </script>

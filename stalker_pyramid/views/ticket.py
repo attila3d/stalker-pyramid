@@ -34,11 +34,11 @@ from stalker.db import DBSession
 from stalker import User, Ticket, Project, Note, Type, Task
 
 from stalker_pyramid.views import (get_logged_in_user, PermissionChecker,
-                                   milliseconds_since_epoch,
                                    dummy_email_address, local_to_utc,
                                    get_multi_integer)
 from stalker_pyramid.views.link import (replace_img_data_with_links,
-                                        convert_file_link_to_full_path)
+                                        MediaManager)
+from stalker_pyramid.views.type import query_type
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -79,17 +79,22 @@ def create_ticket_dialog(request):
     project = Project.query.filter(Project.id == project_id).first()
 
     task_id = request.params.get('task_id', -1)
-    owner_id= request.params.get('owner_id', -1)
+    task = Task.query.get(task_id)
+
+    owner_id = request.params.get('owner_id', -1)
 
     if not project:
-        return Response('No project found with id: %s' % project_id, 500)
+        if not task:
+            return Response('No project found with id: %s' % project_id, 500)
+        else:
+            project = task.project
 
     return {
         'mode': 'create',
         'has_permission': PermissionChecker(request),
         'logged_in_user': logged_in_user,
         'task_id': task_id,
-        'owner_id':owner_id,
+        'owner_id': owner_id,
         'project': project,
         'ticket_types':
             Type.query.filter_by(target_entity_type='Ticket').all(),
@@ -188,6 +193,9 @@ def create_ticket(request):
             for resource in link.resources:
                 recipients.append(resource.email)
 
+            for watcher in link.watchers:
+                recipients.append(watcher.email)
+
         # make recipients unique
         recipients = list(set(recipients))
 
@@ -213,7 +221,7 @@ def create_ticket(request):
             body=description_text,
             html=description_html
         )
-        mailer.send(message)
+        mailer.send_to_queue(message)
 
     DBSession.add(ticket)
 
@@ -231,7 +239,7 @@ def update_ticket(request):
     ticket_id = request.matchdict.get('id', -1)
     ticket = Ticket.query.filter_by(id=ticket_id).first()
 
-    #**************************************************************************
+    # *************************************************************************
     # collect data
     comment = request.params.get('comment')
     comment_as_text = request.params.get('comment_as_text')
@@ -275,6 +283,11 @@ def update_ticket(request):
         ticket.owner.email
     ]
 
+    # append watchers of ticket.links to recipients
+    for link in ticket.links:
+        for watcher in link.watchers:
+            recipients.append(watcher.email)
+
     # mail the comment to anybody related to the ticket
     if comment:
         # convert images to Links
@@ -286,7 +299,8 @@ def update_ticket(request):
                 link.created_by = logged_in_user
 
                 # manage attachments
-                link_full_path = convert_file_link_to_full_path(link.full_path)
+                link_full_path = \
+                    MediaManager.convert_file_link_to_full_path(link.full_path)
                 link_data = open(link_full_path, "rb").read()
 
                 link_extension = os.path.splitext(link.filename)[1].lower()
@@ -304,10 +318,13 @@ def update_ticket(request):
                 attachments.append(attachment)
             DBSession.add_all(links)
 
+        note_type = query_type('Note', 'Ticket Comment')
+        note_type.html_class = 'yellow'
         note = Note(
             content=comment,
             created_by=logged_in_user,
-            date_created=utc_now
+            date_created=utc_now,
+            type=note_type
         )
         ticket.comments.append(note)
         DBSession.add(note)
@@ -353,15 +370,14 @@ def update_ticket(request):
         # make recipients unique
         recipients = list(set(recipients))
         message = Message(
-            subject="Stalker Pyramid: New comment on Ticket #%s" %
-                    ticket.number,
+            subject="New Comment: Ticket #%s" % ticket.number,
             sender=dummy_email_address,
             recipients=recipients,
             body=message_body_text,
             html=message_body_html,
             attachments=attachments
         )
-        mailer.send(message)
+        mailer.send_to_queue(message)
 
     # mail about changes in ticket status
     if ticket_log:
@@ -400,7 +416,7 @@ def update_ticket(request):
         }
 
         message = Message(
-            subject="Stalker Pyramid: Status Update on "
+            subject="Status Updated:"
                     "Ticket #%(ticket_number)s - %(ticket_summary)s" % {
                         'ticket_number': ticket.number,
                         'ticket_summary': ticket.summary
@@ -410,7 +426,7 @@ def update_ticket(request):
             body=message_body_text,
             html=message_body_html
         )
-        mailer.send(message)
+        mailer.send_to_queue(message)
 
     logger.debug('successfully updated ticket')
 
@@ -464,8 +480,8 @@ def get_tickets(request):
         "SimpleEntities_Project".name as project_name,
         "Tickets".owner_id as owner_id,
         "SimpleEntities_Owner".name as owner_name,
-        "SimpleEntities_Ticket".date_created,
-        "SimpleEntities_Ticket".date_updated,
+        extract(epoch from "SimpleEntities_Ticket".date_created::timestamp AT TIME ZONE 'UTC') * 1000 as date_created,
+        extract(epoch from "SimpleEntities_Ticket".date_updated::timestamp AT TIME ZONE 'UTC') * 1000 as date_updated,
         "SimpleEntities_Ticket".created_by_id,
         "SimpleEntities_CreatedBy".name as created_by_name,
         "SimpleEntities_Ticket".updated_by_id,
@@ -508,8 +524,8 @@ def get_tickets(request):
             'project_name': r[5],
             'owner_id': r[6],
             'owner_name': r[7],
-            'date_created': milliseconds_since_epoch(r[8]),
-            'date_updated': milliseconds_since_epoch(r[9]),
+            'date_created': r[8],
+            'date_updated': r[9],
             'created_by_id': r[10],
             'created_by_name': r[11],
             'updated_by_id': r[12],
@@ -520,8 +536,10 @@ def get_tickets(request):
         } for r in result.fetchall()
     ]
     end = time.time()
-    logger.debug('get_entity_tickets took : %s seconds for %s rows' % (
-    end - start, len(data)))
+    logger.debug(
+        'get_entity_tickets took : %s seconds for %s rows' %
+        (end - start, len(data))
+    )
     return data
 
 

@@ -22,18 +22,29 @@ define([
     "dojo/_base/array",
     'dojo/_base/lang',
     "dojo/date/locale",
-    'stalker/js/Resource',
     'stalker/js/HeaderCell'
-], function (domConstruct, array, lang, locale, Resource, draw_header_cell) {
+], function (domConstruct, array, lang, locale, draw_header_cell) {
     // module:
-    //     ResourceColumn
+    //     DiscreetDataColumn
     // summary:
-    //     A dgrid column plugin that generates resource charts in a column.
+    //     A dgrid column plugin that generates box charts in a column.
     'use strict';
 
     /**
-     * Render the given time log data under to the given parent
-     * 
+     * Render the given data under to the given parent
+     *
+     * The options.data should have the following methods:
+     *
+     *   data_in_between(start, end)
+     *     showing the amount of data supplied
+     *     in between the start and end dates.
+     *
+     *   data_labels(start, end)
+     *     showing the data labels
+     *
+     *   data_scale()
+     *     showing the scale of the data
+     *
      * @param options
      * @returns {*|jQuery|HTMLElement}
      */
@@ -49,9 +60,6 @@ define([
         var height = options.height;
         var millies_possible_in_period = options.millies_possible_in_period;
 
-        // create a TimeLog instance
-        var resource = new Resource(data);
-
         var original_start = moment(start).startOf('day');
 
         var start_date = moment(start).startOf(period_unit).startOf('day');
@@ -61,8 +69,8 @@ define([
         var period_start = moment(start_date.startOf(period_unit));
         var period_end = moment(start_date.endOf(period_unit));
 
-        var total_logged_millies;
-        var log_bar, data_bar;
+        var data_in_between;
+        var log_bar, data_bar, data_value, data_labels;
         var log_bar_container;
 
         var parent_div = $($.parseHTML('<div class="logContainer"></div>'));
@@ -74,37 +82,47 @@ define([
         });
         $(parent).append(parent_div);
 
-        var added_first_time_log = false;
-        var resource_count = resource.resource_count;
+        var added_first_data = false;
+        var data_scale = data.data_scale();
 
         // calculate once
-        var denominator = height / (millies_possible_in_period * resource_count);
+        var denominator = height / (millies_possible_in_period * data_scale);
 
         while (period_start < end_date) {
-            total_logged_millies = resource.total_logged_milliseconds(+period_start, +period_end);
-            // draw a div at that range with the height of total_logged_millies
-//            if (total_logged_millies > 0 || added_first_time_log) {
-                added_first_time_log = true;
-                log_bar_container = $($.parseHTML('<div class="log_bar layout"></div>'));
-                log_bar_container.css({
-                    left: Math.floor((period_start - start_date) / scale),
-                    width: Math.floor((period_end - period_start) / scale)
-                });
+            data_in_between = data.data_in_between(+period_start, +period_end);
+            data_labels = data.data_labels(period_start, period_end);
 
-                log_bar = $($.parseHTML('<div class="log_bar log"></div>'));
-                log_bar.css({
-                    height: Math.floor(total_logged_millies * denominator)
-                });
+            // draw a div at that range with the height of data_in_between
+            added_first_data = true;
+            log_bar_container = $($.parseHTML('<div class="log_bar layout"></div>'));
+            log_bar_container.css({
+                left: Math.floor((period_start - start_date) / scale),
+                width: Math.floor((period_end - period_start) / scale)
+            });
 
-                data_bar = $($.parseHTML('<div class="data_bar"></div>'));
-                var total_hours = (total_logged_millies / 3600000).toFixed(0);
-                data_bar.text(total_hours);
-                log_bar_container.append(log_bar);
-                log_bar_container.append(data_bar);
-                parent_div.append(
-                    log_bar_container
-                );
-//            }
+            log_bar = $($.parseHTML('<div class="log_bar log"></div>'));
+            log_bar.css({
+                height: Math.floor(data_in_between * denominator)
+            });
+
+            var total_hours = (data_in_between / 3600000).toFixed(0);
+            data_bar = $($.parseHTML(
+                '<div class="data_bar" ></div>'
+            ));
+
+            data_value = $($.parseHTML(
+                '<div class="data_value"></div>'
+            ));
+            data_value.attr('data-content', data_labels).attr('data-rel', 'popover');
+            data_value.text(total_hours);
+
+            log_bar_container.append(data_bar);
+            log_bar_container.append(log_bar);
+            log_bar_container.append(data_value);
+
+            parent_div.append(
+                log_bar_container
+            );
             // get the new start and end values
             period_start.add(step_size, step_unit).startOf(step_unit);
             period_end.add(step_size, step_unit).endOf(step_unit);
@@ -478,18 +496,6 @@ define([
         //     - scale: number
         //         The number of milliseconds that one pixel represents.
 
-        if (typeof(column.start) === 'function') {
-            column.start = +column.start();
-        } else {
-            column.start = +column.start;
-        }
-
-        if (typeof(column.end) === 'function') {
-            column.end = +column.end();
-        } else {
-            column.end = +column.end;
-        }
-
         /**
          * Renders the today line under to the given parent
          * 
@@ -571,34 +577,46 @@ define([
          * summary:
          *     Renders a task.
          * object: Object
-         *     An object representing a task with the following special
-         *     keys:
-         *     - start: Date|number
-         *         The start time for the task, either as a Date object or
-         *         in milliseconds since the Unix epoch. 
-         *     - end: Date|number
-         *         The end time for the task, either as a Date object or in
-         *         milliseconds since the Unix epoch.
-         *     - completed: number
-         *         The amount of the task that has been completed, between
-         *         0 and 1.
-         *     - dependencies: any[]
-         *         An array of data objects or data object identifiers that
-         *         this task depends on.
+         *     An object representing data with the following functions:
+         *     - data_in_between(start, end)
+         *     - data_labels()
+         *     - data_scale()
          *
          * @param data
-         *     Resource Data
+         *     Data
          * @param value
          *     unused
          * @param {Object} td
          *     DomNode
          */
         column.renderCell = function (data, value, td) {
+            // wrap the data with the grid.wrapper
+            var wrapped_data = new this.grid.data_wrapper(data);
             // render cells
-            zoom_levels[column.scale].chart.draw(td, data, column.start, column.end);
+            zoom_levels[column.scale].chart.draw(td, wrapped_data, column.start, column.end);
 
             // render today
             render_today(td, column.start, zoom_levels[column.scale].scale);
+
+            
+            // draw popover
+            $(td).find('[data-rel=popover]').popover({
+                html:true,
+                container: 'body'
+            }).on('show.bs.popover', function () {
+                // remove all the other popovers
+                var self = this;
+                $('[data-rel=popover]').each(function(){
+                    if (this !== self) {
+                        $(this).popover('hide');
+                    } else {
+                        $(this).popover({
+                            trigger: 'hover'
+                        })
+                    }
+                });
+            });
+            
         };
 
         column.refresh = function (options) {
@@ -660,6 +678,8 @@ define([
          *     DomNode
          */
         column.renderHeaderCell = function (th) {
+            column.fetch_date_values();
+
             // fix scrolling
             var table_width = zoom_levels[column.scale].table_width(column.start, column.end);
             column.grid.addCssRule(".dgrid-column-chart", "width: " + table_width + "px");
@@ -686,6 +706,35 @@ define([
 
             // render today
             render_today(th, column.start, zoom_levels[column.scale].scale);
+        };
+
+        column.fetch_date_values = function() {
+            if (column.scale === null || column.scale === undefined) {
+                // get data from grid
+                column.scale = column.grid.scale;
+            }
+
+            if (column.start === null || column.start === undefined) {
+                // get data from grid
+                column.start = column.grid.start;
+                
+                if (typeof(column.start) === 'function') {
+                    column.start = +column.start();
+                } else {
+                    column.start = +column.start;
+                }
+            }
+
+            if (column.end === null || column.end === undefined) {
+                // get data from grid
+                column.end = column.grid.end;
+                
+                if (typeof(column.end) === 'function') {
+                    column.end = +column.end();
+                } else {
+                    column.end = +column.end;
+                }
+            }
         };
 
         return column;

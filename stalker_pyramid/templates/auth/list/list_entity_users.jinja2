@@ -38,15 +38,13 @@
 {# PAGE-CONTENT #}
 {% block page_content %}
 
-    {% set page_title='Users' %}
-    {% include 'page_header.jinja2' %}
+{#    {% set page_title='Users' %}#}
+{#    {% include 'page_header.jinja2' %}#}
 
 
     {% if entity.entity_type == 'Studio' %}
-        {% set address=request.route_path('get_users') %}
         {% set add_button_address=request.route_path('create_user_dialog') %}
     {% else %}
-        {% set address=request.route_path('get_entity_users', id=entity.id) %}
         {% set add_button_title='Add' %}
         {% set add_button_address=request.route_url('append_entities_to_entity_dialog', id=entity.id, entities='User', _query={'came_from': request.current_route_path()}) %}
     {% endif %}
@@ -61,7 +59,6 @@
 {% block extrascripts %}
     {% raw %}
     <script id="tmpl_itemThead" type="text/x-dot-template">
-
         <tr>
             <th>Thumbnail</th>
             <th>Name</th>
@@ -90,13 +87,11 @@
             <td>{{=it.ticketsCount}}
             </td>
             <td>
-                <span class="label label-{{=it.status_color}}">{{=it.status}}</span>
+                <span class="label label-status_{{=it.status_color}}">{{=it.status}}</span>
             </td>
             <td>
                 {{ if (it.update_user_action) { }}
-                <a class="blue"
-
-                   href="{{=it.update_user_action}}">
+                <a class="blue" href="{{=it.update_user_action}}">
                     <i class="icon-edit bigger-130"></i>
                 </a>
                 {{ } }}
@@ -117,15 +112,13 @@
 
     <script>
 
-        var tableParameters = {"aoColumns": [null, null, null, {'sType': 'num-html'},{'sType': 'num-html'},null, null]}
-        var sortingParameters = [[0, 'asc']]
-        var tableDataAddress = '{{ request.route_path('get_entity_users', id=entity.id) }}'
-
+        var tableParameters = {"aoColumns": [null, null, null, {'sType': 'num-html'},{'sType': 'num-html'},null, null]};
+        var sortingParameters = [[0, 'asc']];
+        var tableDataAddress;
         {% if entity.entity_type == 'Studio' %}
-            tableDataAddress = '{{ request.route_path('get_users') }}'
+            tableDataAddress = '{{ request.route_path('get_users') }}';
         {% else %}
-            tableDataAddress = '{{ request.route_path('get_entity_users', id=entity.id) }}'
-
+            tableDataAddress = '{{ request.route_path('get_entity_users', id=entity.id) }}';
         {% endif %}
 
     </script>
