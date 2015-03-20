@@ -1,0 +1,48 @@
+<script type="text/javascript">
+
+
+			  function drawPieChart(placeholder, data, position) {
+			 	  console.log(placeholder)
+                  $.plot(placeholder, data, {
+					series: {
+						pie: {
+							show: true,
+							tilt:0.8,
+							highlight: {
+								opacity: 0.25
+							},
+							stroke: {
+								color: '#fff',
+								width: 2
+							},
+                            label: {
+                                show: true,
+                                radius: 0.5,
+                                background: {
+                                    color: '#ffffff',
+                                    opacity: 0.8
+                                },
+                                threshold: 0
+                            },
+							startAngle: 2
+						}
+					},
+					legend: {
+						show: true,
+						position: position || "ne",
+						labelBoxBorderColor: null,
+						margin:[-30,15]
+					}
+					,
+					grid: {
+						hoverable: true,
+						clickable: true
+					}
+				 })
+			 }
+
+
+</script>
+
+<script src='{{ request.static_url("stalker_pyramid:static/ace/js/jquery.easy-pie-chart.min.js") }}'></script>
+<script src='{{ request.static_url("stalker_pyramid:static/ace/js/jquery.flot.pie.min.js") }}'></script>
