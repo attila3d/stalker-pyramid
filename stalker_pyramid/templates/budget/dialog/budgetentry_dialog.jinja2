@@ -1,0 +1,162 @@
+<script class="dialog_loaded"></script>
+
+<div class="row-fluid">
+
+    <form id='budgetentry_form'
+          class='form-horizontal'
+          role='form'
+          method="post">
+
+        <div class="row-fluid">
+            {# Good #}
+            <div class='control-group'>
+                <label class='span3 control-label'
+                       for='budgetentry_good'>Good</label>
+                <div class="span5">
+                     <select id='budgetentry_good'
+                            name='id'
+                            data-placeholder='Good'
+                            required>
+                    </select>
+                </div>
+            </div>
+
+            {#Amount #}
+            <div class='control-group'>
+                <label class='span3 control-label'
+                       for='budgetentry_amount'>Amount</label>
+                <div class="span5">
+                    <input id='budgetentry_amount'
+                           name='amount'
+                           class="input-mini"
+                           type='text'
+                           min=1
+                           max=1000
+                           is_updating=false>
+                    <span id="good_unit"> Hour</span>
+                </div>
+            </div>
+            {#Price #}
+            <div class="control-group">
+                <label class="span3 control-label"
+                       for="budgetentry_price">Price</label>
+                <div class="span9">
+                    <input id="budgetentry_price"
+                           name='price'
+                           type="text"
+                           class="input-mini"
+                           placeholder="Price"
+                           required>
+                </div>
+            </div>
+            {#Description #}
+            <div class="control-group'">
+                <label for="budgetentry_description"
+                       class="span3 control-label">Description</label>
+                <div class="span9">
+                    <textarea id="budgetentry_description"
+                              name='description'
+                              class="autosize-transition"
+                              style="overflow: hidden;
+                                         word-wrap: break-word;
+                                         resize: horizontal;
+                                         height: 50px;"
+
+                            ></textarea>
+                </div>
+            </div>
+
+        </div>
+
+    </form>
+</div>
+<script src='{{ request.static_url("stalker_pyramid:static/ace/js/fuelux/fuelux.spinner.min.js") }}'></script>
+
+<script type="text/javascript">
+
+    function init_dialog() {
+
+        console.debug('starting to initialize budgetentry dialog!!!');
+
+        var dialog_label = $('#dialog_template_label');
+        dialog_label.find('span').remove();
+        dialog_label.append('<span>{{ mode}} BudgetEntry</span>');
+
+        {# Good ******************************************************* #}
+        {% raw %}
+            var good_option_template = doT.template(
+                    '<option value={{=it.id}}_{{=it.unit }}>{{=it.name}}</option>'
+            );
+        {% endraw %}
+        var budgetentry_good = $('#budgetentry_good');
+        var deferred = chosen_searchable_field_creator(budgetentry_good,'/goods/', good_option_template);
+
+        {# Amount ******************************************************* #}
+        $('#budgetentry_amount').ace_spinner({
+            value: 1,
+            min: 1,
+            step: 1,
+            btn_up_class: 'btn-info',
+            btn_down_class: 'btn-info'
+        });
+        {# Unit ******************************************************* #}
+
+        budgetentry_good.on('change', function(){
+
+            $('#good_unit').text($(this).val().split('_')[1]);
+        });
+
+        {# Price ******************************************************* #}
+
+        $('#budgetentry_price').ace_spinner({
+            value:0,
+            min:100,
+            step:100,
+            icon_up:'icon-caret-up',
+            icon_down:'icon-caret-down'
+        });
+
+
+        {# ***************************************************************** #}
+        {# Submit Button #}
+        var submit_button = $('#dialog_template_submit_button');
+        submit_button.on('click', function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            submit_button.button('loading');
+            var budgetentry_form = $('#budgetentry_form');
+
+            var url = '/budgetentries/create';
+            $.post(
+                url,
+                budgetentry_form.serialize() + '&' +
+                $.param({
+                    'budget_id': {{ budget.id }},
+                    'good_id':budgetentry_good.val().split('_')[0]
+                })
+            ).done(function (jqXHR) {
+                //$('#new_outputs_storage').text(JSON.stringify(jqXHR));
+                window.location.reload();
+            }).fail(function (jqXHR) {
+                bootbox.alert(jqXHR.responseText);
+                submit_button.button('reset');
+            });
+        });
+
+        console.debug('finished initializing the budgetentry dialog!')
+    }
+</script>
+
+<script type="text/javascript">
+    function destruct_dialog() {
+        $('#budgetentry_name').unbind();
+        $('#budgetentry_description').unbind();
+        $('#dialog_template_submit_button').unbind();
+
+        $('#dialog_template').data('modal', null);
+    }
+</script>
+
+
+
